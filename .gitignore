@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+railway_resource_checks/output/*
+!railway_resource_checks/output/validation.json
+!railway_resource_checks/output/integration.json
+!railway_resource_checks/output/nonbanked-turnout.png
+!railway_resource_checks/output/grade-transition.png
+!railway_resource_checks/output/turnout-stock-fixed-close.png
+!railway_resource_checks/output/turnout-top.png
+!railway_resource_checks/output/turnout-toe-top.png

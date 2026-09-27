@@ -1,0 +1,116 @@
+{
+  "date": "2026-09-28",
+  "buildPassed": true,
+  "integration": {
+    "MTR + Optional Rail": {
+      "passed": true,
+      "evidence": [
+        "PACK_STYLE_SELECTION: PASS explicit custom profile wins automatic order; legacy and missing saved IDs resolve",
+        "PACK_PROFILE: PASS active resource manager, detailed section, sleeper, fastener, ballast, atlas UV",
+        "PACK_CONTINUITY: PASS actual render cells, grade/cant transitions and reversed styles; points=4155 maxGap=0.0",
+        "PACK_BANKING: PASS actual native cells, ballast/sleeper/rail axes agree; maxError=1.432187701766452E-14 points=1180",
+        "PACK_TURNOUT: PASS detected custom style and model materials; views=1",
+        "PACK_HANDOFF: PASS native/custom boundary agrees for all four style aliases; hiddenCells=46 ordinaryCells=239",
+        "PACK_SCREENSHOT: pack-turnout-overview.png",
+        "PACK_SCREENSHOT: pack-turnout-top.png",
+        "PACK_SCREENSHOT: pack-turnout-close.png",
+        "PACK_SEAMS: PASS real native cells adjusted=6 including reversed segment",
+        "PACK_SCREENSHOT: pack-segment-seam.png",
+        "PACK_SCREENSHOT: pack-banked-ballast.png",
+        "PACK_SCREENSHOT: pack-banked-turnout.png",
+        "PACK_PERFORMANCE: PASS stationary frames=33 geometryBuilds=0 uploads=0 supportLodDraws=[650, 3905, 13389] turnoutLodDraws=[63, 503, 1210]",
+        "PACK_SCREENSHOT: pack-fastener-close.png",
+        "PACK_SCREENSHOT: pack-grade-transition.png",
+        "PACK_SCREENSHOT: pack-lod-distance.png",
+        "PACK_STYLE_SELECTION: PASS explicit custom profile wins automatic order; legacy and missing saved IDs resolve",
+        "PACK_PROFILE: PASS active resource manager, detailed section, sleeper, fastener, ballast, atlas UV",
+        "PACK_RELOAD: PASS cache replaced after full resource reload",
+        "PACK_RUNTIME: PASS"
+      ],
+      "log": "../MTR_Railway_Point_Advanced/build/runtime-pack-012/stdout.log"
+    },
+    "MTR only": {
+      "passed": true,
+      "evidence": [
+        "PACK_STYLE_SELECTION: PASS explicit custom profile wins automatic order; legacy and missing saved IDs resolve",
+        "PACK_PROFILE: PASS active resource manager, detailed section, sleeper, fastener, ballast, atlas UV",
+        "PACK_CONTINUITY: PASS actual render cells, grade/cant transitions and reversed styles; points=4170 maxGap=0.0",
+        "PACK_BANKING: PASS actual native cells, ballast/sleeper/rail axes agree; maxError=0.0 points=1180",
+        "PACK_TURNOUT: PASS detected custom style and model materials; views=1",
+        "PACK_HANDOFF: PASS native/custom boundary agrees for all four style aliases; hiddenCells=46 ordinaryCells=240",
+        "PACK_SCREENSHOT: pack-turnout-top.png",
+        "PACK_SCREENSHOT: pack-turnout-overview.png",
+        "PACK_SCREENSHOT: pack-turnout-close.png",
+        "PACK_SEAMS: PASS real native cells adjusted=6 including reversed segment",
+        "PACK_SCREENSHOT: pack-segment-seam.png",
+        "PACK_SCREENSHOT: pack-banked-ballast.png",
+        "PACK_SCREENSHOT: pack-banked-turnout.png",
+        "PACK_PERFORMANCE: PASS stationary frames=33 geometryBuilds=0 uploads=0 supportLodDraws=[650, 3812, 13230] turnoutLodDraws=[65, 517, 1234]",
+        "PACK_SCREENSHOT: pack-fastener-close.png",
+        "PACK_SCREENSHOT: pack-grade-transition.png",
+        "PACK_SCREENSHOT: pack-lod-distance.png",
+        "PACK_SCREENSHOT: pack-turnout-toe-top.png",
+        "PACK_STYLE_SELECTION: PASS explicit custom profile wins automatic order; legacy and missing saved IDs resolve",
+        "PACK_PROFILE: PASS active resource manager, detailed section, sleeper, fastener, ballast, atlas UV",
+        "PACK_RELOAD: PASS cache replaced after full resource reload",
+        "PACK_RUNTIME: PASS"
+      ],
+      "log": "../MTR_Railway_Point_Advanced/build/runtime-pack-mtr-only-012/stdout.log"
+    }
+  },
+  "ballastMaxThickness": 0.35,
+  "pressurePlate": {
+    "width": 0.146,
+    "length": 0.21,
+    "fullPlateUnderBothLoops": true
+  },
+  "pack": "dist/Citizons_Railway.zip",
+  "clientJar": "../MTR_Railway_Point_Advanced/build/libs/mtr_railway_point_advanced-0.1.2.jar",
+  "unitBanking": "RESOURCE_BANKING: PASS native matrix, shared pivot, +/- cant, reversed style, grade, offsets; points=5400 maxError=5.686076344939731E-14",
+  "generatedAtLocal": "2026-09-28T00:07:18",
+  "buildLogs": [
+    "../MTR_Railway_Point_Advanced/build/stock-fitting-build.log",
+    "../MTR_Railway_Point_Advanced/build/stock-fitting-photo-build.log"
+  ],
+  "lod": {
+    "distancesMeters": [
+      4,
+      12
+    ],
+    "fullModelFaces": [
+      4600,
+      1176,
+      756
+    ],
+    "staticCacheChunkMeters": 8,
+    "turnoutFittingBatchMeters": 4
+  },
+  "performanceScope": "Actual isolated client rendering: distance variants drawn; stationary custom cache geometry builds and PointGpu uploads remain zero. No comparative FPS benchmark was performed.",
+  "runtimeFixtures": [
+    "zero-cant turnout",
+    "joined ordinary rails with reversed style",
+    "15-degree canted ordinary rail",
+    "8-degree canted turnout",
+    "curved 6-metre climb with -12 to +22 degree cant transition"
+  ],
+  "fixes": [
+    "shared endpoint sweep for rail and ballast",
+    "raw native callback keys retained across two-arc repeat-phase restart",
+    "support layout compensates trimmed sweep centres",
+    "canonical style IDs used for native suppression and cell intervals",
+    "distance-selected support models and persistent GPU batches",
+    "stock-rail fitting priority and rail-aligned fitting orientation"
+  ],
+  "screenshots": {
+    "nonbanked-turnout.png": "railway_resource_checks/output/nonbanked-turnout.png",
+    "grade-transition.png": "railway_resource_checks/output/grade-transition.png",
+    "turnout-stock-fixed-close.png": "railway_resource_checks/output/turnout-stock-fixed-close.png",
+    "turnout-top.png": "railway_resource_checks/output/turnout-top.png",
+    "turnout-toe-top.png": "railway_resource_checks/output/turnout-toe-top.png"
+  },
+  "stockFittings": {
+    "passed": true,
+    "evidence": "STOCK_FITTINGS: PASS outer stock seats retained across close-route deduplication, mirrored and swapped branches; seats=128 maxError=7.616489811865217E-8",
+    "selection": "Prefer outer stock-rail seats before deduplicating close inner-route seats; orient each fitting to its rail."
+  }
+}

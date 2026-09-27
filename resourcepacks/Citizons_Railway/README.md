@@ -1,0 +1,41 @@
+# Citizons Railway
+
+Minecraft 1.20.1 / Forge 47.4.18 / MTR 4.0.3 / MTR Railway Point Advanced。
+
+本包提供实体钢轨、闭合端面、中央下凹的混凝土轨枕、螺栓弹条扣件和道砟床。轨面高度为 `0.26428 m`，轨底为 `0.099422 m`，轨距保持 1435 mm。材质以浅灰混凝土、灰色碎石、棕灰轨腰和银灰磨耗轨顶为主。
+
+## 资源入口
+- `assets/mtrsteamloco/rails/citizons_railway.json`：MTR Steam Loco 轨道样式入口。
+- `assets/citizons_railway/rail_profiles/citizons_mainline_1435.json`：MTR Railway Point Advanced 的尺寸与纹理描述。
+- `models/rail/rail_high.obj` / `rail_mid.obj` / `rail_low.obj`：三档距离模型，具有相同钢轨截面、轨距、轨面高度和 0.6 m 标称重复单元。普通轨道和道岔共用扣件细节档位。
+- 模型同目录的 `rail_atlas.png`：钢轨侧面、磨耗面、端面、混凝土、扣件、道砟六个区域。OBJ 使用标准 V 坐标，样式必须保持 `flipV: true`。
+
+## 道岔与普通轨道
+
+须搭配本工作区本次构建的 Point Advanced 客户端 JAR。加载器按 `modelGroups` 从普通轨道的同一个 OBJ 提取钢轨、轨枕、扣件和需要保留的道砟，保留逐顶点 UV。道岔钢轨沿既有道岔路径扫掠，长岔枕随承载范围延长，材质和细节来自同一资源模型。没有修改握手协议或服务端连接逻辑。
+
+`alignEndpointSleepers: true` 启用客户端端部枕木调整。它按 MTR / Optional Rail 的真实重复单元计算位置，给端点预留半个节距，并限制局部枕木间距。钢轨和道砟沿共享的两端截面连续变形，适应曲线、坡度及倾角变化；枕木与扣件保持刚体并一起移动。客户端去掉会让相邻截面错位的随机单元微扰。
+
+道砟、钢轨及需要调整的支承使用持久 GPU 缓存，几何未变化时不逐帧重建或上传。普通支承复用 MTR 的模型缓存；道岔扣件按空间分组选择近、中、远模型。自动样式选择优先使用有效的资源包模型；旧版带命名空间或方向后缀的样式 ID 会按实际注册 ID 解析，失效的旧锁定样式回到当前轨道样式。有效的手动样式选择仍被保留。
+
+## 新增其他钢轨系列
+
+无需包名白名单，也不需要修改握手。启用资源包中的每个有效样式描述都会被读取。为新系列复制样式入口与 `rail_profiles/*.json`，修改样式 ID、模型/贴图路径；结构相同时保持 `modelGroups` 即可。`style` 推荐填写 MTR 实际注册的 ID：本包是 `citizons_mainline_1435`。旧版 `mtrsteamloco:` 前缀及 `_1` / `_2` 方向后缀会统一解析到已注册样式，普通轨道和道岔接管使用同一解析规则。
+
+- `rail`：一侧钢轨的纵向面，本包使用 `rail_right`；不要包含端盖。
+- `sleeper`：完整单根轨枕，中心位于 z=0。
+- `fastener`：与 `rail` 同一侧、保留原坐标的扣件。
+- `preserve`：道岔接管后仍绘制的道砟等附属组。
+- `supports`：端部调整时需要一起移动的全部轨枕与双侧扣件。
+
+OBJ 必须预先三角化凹多边形，提供 UV 和有效 MTL 贴图。不同系列可使用不同资源命名空间；只读取资源数据，不提供代码执行或额外权限。
+
+## 模型档位
+
+本次 Point Advanced 客户端已启用真实距离切换：4 m 内完整双回环弹条、螺母和螺纹细节；4–12 m 简化扣件；12 m 外保留低细节板件轮廓。钢轨截面在三档间保持一致，避免档位交界处出现裂缝。单个完整单元的面数依次为 4600 / 1176 / 756；这是几何面数，不代表同等比例的 FPS 提升。仅安装资源包而不更新客户端 JAR 时，MTR 仍只加载样式入口的高细节 OBJ。
+
+## 安装与验证
+
+用本次构建的 `MTR_Railway_Point_Advanced/build/libs/mtr_railway_point_advanced-0.1.2.jar` 替换客户端原有 Point Advanced JAR，不要同时放入两份。复制整个资源包文件夹或 ZIP 到实例 `resourcepacks`，启用后选择 Citizons 1435mm 样式；已有副本需覆盖并重新加载资源。道岔外观若此前手动锁定了其他样式，请在编辑器中改回自动或 Citizons 样式。
+
+模型、贴图由工作区 `generate_citizons_railway.py` 确定性生成。静态检查和 Blender 模型预览位于 `railway_resource_checks`；隔离游戏测试由模组的 `tools/runtime_probe.ps1 -RailPack -BaseOnly` 运行，日志和游戏截图位于 `build/runtime-pack-012`。

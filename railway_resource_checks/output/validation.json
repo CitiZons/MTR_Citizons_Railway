@@ -1,0 +1,76 @@
+{
+  "scope": "Resource geometry checks; client adapter tested by mod regression and isolated runtime",
+  "models": {
+    "rail_high": {
+      "faces": 4600,
+      "vertices": 14452,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "rail_mid": {
+      "faces": 1176,
+      "vertices": 4036,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "rail_low": {
+      "faces": 756,
+      "vertices": 2596,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "sleeper": {
+      "faces": 156,
+      "vertices": 560,
+      "groups": [
+        "sleeper"
+      ]
+    },
+    "fastener": {
+      "faces": 1966,
+      "vertices": 6092,
+      "groups": [
+        "fastener"
+      ]
+    }
+  },
+  "gauge": 1.435,
+  "railTop": 0.26428,
+  "repeatInterval": 0.6,
+  "sleeperCenterDepression": 0.035111,
+  "ballastPlateauMin": 0.026,
+  "ballastBottom": -0.304,
+  "ballastMaximumThickness": 0.35,
+  "ballastToeWidth": 3.7,
+  "uvConvention": "OBJ bottom-left / MTR flipV true",
+  "idempotent": true,
+  "automaticLodSupported": true,
+  "lodDistances": [
+    4,
+    12
+  ]
+}
