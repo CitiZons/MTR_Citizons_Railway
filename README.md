@@ -20,6 +20,8 @@
 
 ## 源码与再生成
 
+整理架构：模型、纹理、生成器、验证脚本与发布包统一维护在 `MTR_Citizons_Railway` 子项目内。下列路径均相对于本仓库根目录。
+
 - `resourcepacks/Citizons_Railway/`：可直接安装的包目录，包含模型、纹理、样式和轨型描述。
 - `resourcepacks/Citizons_Railway/VERSION`：资源包发布版本的唯一来源。
 - `generate_citizons_railway.py`：确定性模型与纹理生成器。
@@ -41,18 +43,50 @@ python package_release.py
 
 ## 验证记录
 
-配套 Mod `0.1.3` 的支撑更新已通过完整构建、翼轨专项回归及 MTR + Optional Rail 隔离运行；静止 64 帧内几何重建和上传均为 0，9 组最终世界非支撑几何与基线一致。支撑初版也通过仅 MTR 环境；最终翼轨补齐版本未另行复跑仅 MTR。详情见配套 Mod 的 `VALIDATION.md`。以下资源包隔离运行摘要和截图是此前版本的历史验证记录，未展示 `0.1.3` 新增的滑床板及翼轨支架。
+配套 Mod `0.1.3` 的支撑更新已通过完整构建、翼轨专项回归及 MTR + Optional Rail 隔离运行；静止 64 帧内几何重建和上传均为 0，9 组最终世界非支撑几何与基线一致。支撑初版也通过仅 MTR 环境；最终翼轨补齐版本未另行复跑仅 MTR。详情见配套 Mod 的 `VALIDATION.md`。以下运行摘要保留此前资源包验证记录；文末实机截图已更新为包含翼轨承座修复的实现，与 `0.1.3` 发布版几何一致。
 
-本次 MTR + Optional Rail、仅 MTR 两种隔离运行均通过资源材质、旋转轴、道岔接管、枕木接缝、资源重载与渲染缓存检查。坡度／倾角变化的 4155 / 4170 个端面点最大接缝均为 0；外侧基本轨扣件位置检查覆盖 128 个承座。静止 33 帧中自定义几何重建与 PointGpu 上传均为 0，未进行对比 FPS 基准。
+此前 MTR + Optional Rail、仅 MTR 两种隔离运行均通过资源材质、旋转轴、道岔接管、枕木接缝、资源重载与渲染缓存检查。坡度／倾角变化的 4155 / 4170 个端面点最大接缝均为 0；外侧基本轨扣件位置检查覆盖 128 个承座。静止 33 帧中自定义几何重建与 PointGpu 上传均为 0，未进行对比 FPS 基准。
 
 [integration.json](railway_resource_checks/output/integration.json) 保存通过标记与机位信息；其中 `../MTR_Railway_Point_Advanced/build/...` 指向原始测试的同级 Mod 构建目录，日志和 JAR 不包含在本资源包仓库中。对应 Mod 的回归测试可通过同级仓库布局找到本包，或用 `CITIZONS_RAILWAY_PACK` 指向包目录；游戏探针可用 `-RailPackZip` 指定本仓库的 ZIP。
 
+## 实机效果与扣件特写
+
+以下均为已有隔离游戏截图（Minecraft 1.20.1 / MTR 4.0.3 / Optional Rail）。拍摄于最终翼轨承座修复后、版本号升为 0.1.3 前；几何实现与发布版相同。图片随仓库保存在 `docs/images/`，无需引用本机构建目录。护轨、翼轨支架和滑床板由 Point Advanced 生成。
+
 ### 零倾角道岔俯视
 
-![零倾角道岔整体俯视](railway_resource_checks/output/turnout-top.png)
+![零倾角道岔整体俯视](docs/images/turnout-top.png)
 
-### 入口扣件与最外侧基本轨
+![道岔入口与滑床板俯视](docs/images/turnout-toe-top.png)
 
-![入口扣件俯视](railway_resource_checks/output/turnout-toe-top.png)
+### 普通轨道弹条与压板
 
-![外侧基本轨扣件近景](railway_resource_checks/output/turnout-stock-fixed-close.png)
+近距离可见双回环弹条、螺母及完整承压板；远处按距离切换简化细节。
+
+![普通轨道弹条、螺母和完整压板特写](docs/images/fastener-close.png)
+
+### 外侧基本轨扣件
+
+![最外侧基本轨扣件与平顶岔枕](docs/images/stock-fastener-close.png)
+
+### 尖轨滑床板
+
+固定滑床板承托活动尖轨，基本轨外侧保留夹持。
+
+![尖轨固定滑床板特写](docs/images/slide-bed-close.png)
+
+### 护轨共用承座
+
+护轨与相邻运行轨共用底板，外侧增加腹板、加强肋和螺栓。
+
+![护轨底板与加强支架特写](docs/images/guard-base-close.png)
+
+### 翼轨共用承座
+
+翼轨采用与护轨相同的承座结构，并沿各自轨道放置。
+
+![翼轨底板、加强肋及螺栓特写](docs/images/wing-base-close.png)
+
+### 岔心底板
+
+![岔心共用底板与两侧翼轨承座](docs/images/frog-base-close.png)
