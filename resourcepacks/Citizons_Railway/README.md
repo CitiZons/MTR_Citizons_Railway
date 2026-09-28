@@ -2,6 +2,8 @@
 
 Minecraft 1.20.1 / Forge 47.4.18 / MTR 4.0.3 / MTR Railway Point Advanced。
 
+发布版本：`0.1.0`，配套 MTR Railway Point Advanced `0.1.3`。`VERSION` 是本包版本号来源；`pack_format: 15` 是 Minecraft 资源格式版本。本次发布仅更新配套说明，模型和贴图未改。
+
 本包提供实体钢轨、闭合端面、中央下凹的混凝土轨枕、螺栓弹条扣件和道砟床。轨面高度为 `0.26428 m`，轨底为 `0.099422 m`，轨距保持 1435 mm。材质以浅灰混凝土、灰色碎石、棕灰轨腰和银灰磨耗轨顶为主。
 
 ## 资源入口
@@ -11,6 +13,8 @@ Minecraft 1.20.1 / Forge 47.4.18 / MTR 4.0.3 / MTR Railway Point Advanced。
 - 模型同目录的 `rail_atlas.png`：钢轨侧面、磨耗面、端面、混凝土、扣件、道砟六个区域。OBJ 使用标准 V 坐标，样式必须保持 `flipV: true`。
 
 ## 道岔与普通轨道
+
+配套 Point Advanced `0.1.3` 将多轨岔枕改为平顶，普通轨枕仍中央下凹；尖轨使用固定滑床板，岔心使用共用底板，护轨及翼轨均有共用承座、加强支架和螺栓。这些支撑由 Mod 按本包模型生成，沿用三档距离细节，单独替换资源包不能更新旧 Mod 的支撑代码。
 
 须搭配本工作区本次构建的 Point Advanced 客户端 JAR。加载器按 `modelGroups` 从普通轨道的同一个 OBJ 提取钢轨、轨枕、扣件和需要保留的道砟，保留逐顶点 UV。道岔钢轨沿既有道岔路径扫掠，长岔枕随承载范围延长，材质和细节来自同一资源模型。没有修改握手协议或服务端连接逻辑。
 
@@ -36,6 +40,6 @@ OBJ 必须预先三角化凹多边形，提供 UV 和有效 MTL 贴图。不同�
 
 ## 安装与验证
 
-用本次构建的 `MTR_Railway_Point_Advanced/build/libs/mtr_railway_point_advanced-0.1.2.jar` 替换客户端原有 Point Advanced JAR，不要同时放入两份。复制整个资源包文件夹或 ZIP 到实例 `resourcepacks`，启用后选择 Citizons 1435mm 样式；已有副本需覆盖并重新加载资源。道岔外观若此前手动锁定了其他样式，请在编辑器中改回自动或 Citizons 样式。
+用 `mtr_railway_point_advanced-0.1.3.jar` 替换客户端原有 Point Advanced JAR，不要同时放入两份。复制整个资源包文件夹或 `Citizons_Railway-0.1.0.zip` 到实例 `resourcepacks`，启用后选择 Citizons 1435mm 样式；已有副本需覆盖并重新加载资源。道岔外观若此前手动锁定了其他样式，请在编辑器中改回自动或 Citizons 样式。
 
-模型、贴图由工作区 `generate_citizons_railway.py` 确定性生成。静态检查和 Blender 模型预览位于 `railway_resource_checks`；隔离游戏测试由模组的 `tools/runtime_probe.ps1 -RailPack -BaseOnly` 运行，日志和游戏截图位于 `build/runtime-pack-012`。
+模型、贴图由工作区 `generate_citizons_railway.py` 确定性生成；发布 ZIP 由 `package_release.py` 从包内 `VERSION` 构建。静态检查和 Blender 模型预览位于 `railway_resource_checks`。仓库中已有的隔离游戏结果由先前的 Mod 构建通过 `tools/runtime_probe.ps1 -RailPack -BaseOnly` 生成，是历史验证记录；最终 `0.1.3` 翼轨补齐版本未另行复跑仅 MTR 环境。
