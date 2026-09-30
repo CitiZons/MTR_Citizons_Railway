@@ -1,7 +1,8 @@
-"""Build deterministic versioned and compatibility resource-pack archives."""
+"""Build archives and unpack the versioned release into resourcepacks/."""
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -40,6 +41,18 @@ def main() -> None:
             archive.writestr(entry, source.read_bytes(), compresslevel=9)
     compatibility_path.write_bytes(archive_path.read_bytes())
     print(f"Built {archive_path.relative_to(ROOT)} and {compatibility_path.relative_to(ROOT)}")
+    unpacked = ROOT / "resourcepacks" / f"Citizons_Railway-{version}"
+    if unpacked.exists():
+        shutil.rmtree(unpacked)
+    unpacked.mkdir(parents=True)
+    with ZipFile(archive_path) as archive:
+        root = unpacked.resolve()
+        for entry in archive.infolist():
+            target = (unpacked / entry.filename).resolve()
+            if not target.is_relative_to(root):
+                raise ValueError(f"Unsafe archive entry: {entry.filename}")
+        archive.extractall(unpacked)
+    print(f"Unpacked versioned resource pack ready: {unpacked}")
 
 
 if __name__ == "__main__":

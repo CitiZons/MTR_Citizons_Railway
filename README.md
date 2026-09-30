@@ -6,15 +6,15 @@
 
 ## 当前版本与配套更新
 
-当前版本为 `0.1.0`，与 MTR Railway Point Advanced `0.1.3` 配套。包内 `VERSION` 是发布版本的唯一来源，资源包列表描述和带版本 ZIP 由打包脚本同步生成。Minecraft 的 `pack_format: 15` 是资源格式版本，与发布版本独立。
+当前版本为 `0.1.1`，与 MTR Railway Point Advanced `0.1.4` 配套。包内 `VERSION` 是发布版本的唯一来源，资源包列表描述和带版本 ZIP 由打包脚本同步生成。Minecraft 的 `pack_format: 15` 是资源格式版本，与发布版本独立。
 
-本次发布未修改模型、贴图和轨型描述。配套 Point Advanced `0.1.3` 新增平顶多轨岔枕、固定滑床板、岔心共用底板，以及护轨／翼轨共用承座和加强支架；普通轨枕仍保留中央下凹。这些效果由 Mod 使用本包模型和材质生成，单独更新资源包无法补齐旧 Mod 的翼轨扣件。见 [CHANGELOG.md](CHANGELOG.md)。
+本次发布新增 `Citizons 高仿真钢轨(外护轨) 1435mm` 与 `Citizons 高仿真钢轨(中央护轨) 1435mm` 样式，普通样式保持不变。Point Advanced `0.1.4` 负责连续护轨、独立端头和道岔模板切换，并沿用平顶多轨岔枕、固定滑床板、岔心共用底板及护轨／翼轨共用承座。普通轨枕仍保留中央下凹。见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 安装
 
-1. 将 [dist/Citizons_Railway-0.1.0.zip](dist/Citizons_Railway-0.1.0.zip) 放入游戏实例的 `resourcepacks` 并启用；兼容文件名 `dist/Citizons_Railway.zip` 内容完全相同。开发时也可直接使用 `resourcepacks/Citizons_Railway` 文件夹。
-2. 安装 MTR Railway Point Advanced `0.1.3`。普通轨道与道岔一致的材质、连续坡面、枕木接缝调整、翼轨承座和自动细节切换需要该版本客户端。
-3. 选择 `Citizons 1435mm` 样式。曾手动锁定其他道岔轨型时，在编辑器中改回自动或 Citizons 样式；不要同时安装多份 Point Advanced JAR。
+1. 将 [dist/Citizons_Railway-0.1.1.zip](dist/Citizons_Railway-0.1.1.zip) 放入游戏实例的 `resourcepacks` 并启用；兼容文件名 `dist/Citizons_Railway.zip` 内容完全相同。开发时也可直接使用 `resourcepacks/Citizons_Railway-0.1.1` 文件夹。
+2. 安装 MTR Railway Point Advanced `0.1.4`。普通轨道与道岔一致的材质、连续坡面、枕木接缝调整、翼轨承座、护轨端头和自动细节切换需要该版本客户端。
+3. 选择 `Citizons 高仿真钢轨1435mm` 样式。曾手动锁定其他道岔轨型时，在编辑器中改回自动或 Citizons 样式；不要同时安装多份 Point Advanced JAR。
 
 4 m 内使用完整扣件，4–12 m 使用简化扣件，12 m 外保留低细节轮廓，无需手动切换样式。三档完整单元面数为 4600 / 1176 / 756；单独启用资源包时，MTR 使用入口中的高细节 OBJ。
 
@@ -38,6 +38,8 @@ python generate_citizons_railway.py
 python railway_resource_checks/validate.py
 python package_release.py
 ```
+
+每次构建完成后，将带版本 ZIP 解压并保留到 `resourcepacks/Citizons_Railway-0.1.1`，后续构建更新对应版本文件夹；`resourcepacks/Citizons_Railway` 是生成器使用的源目录。文件夹根目录包含 `pack.mcmeta` 和 `assets`，可以直接复制到游戏实例的 `resourcepacks` 并启用；`dist` 中的 ZIP 作为额外发布文件保留。
 
 模型预览可通过 `blender --background --python railway_resource_checks/render.py` 生成。包内 [README](resourcepacks/Citizons_Railway/README.md) 与 [模型参数](resourcepacks/Citizons_Railway/MODEL_NOTES.md) 说明分组角色、坐标和新增钢轨系列的方式。新增系列沿用相同结构并提供独立样式描述即可，无需包名白名单或修改握手协议。
 
@@ -90,3 +92,13 @@ python package_release.py
 ### 岔心底板
 
 ![岔心共用底板与两侧翼轨承座](docs/images/frog-base-close.png)
+
+## 全程护轨
+
+两种护轨均位于运行轨之间。外护轨中心线为 ±0.6285 m，与运行轨的轨头净距为 55 mm，复用道岔钢轨截面、共用底板、外侧弹条夹持、立板、三块三角加强肋和锚栓。中央护轨各向内移动半个轨头宽度（34 mm），中心线为 ±0.356 m，使用独立螺栓压板，枕木取消中央下凹；护轨顶面与侧面使用同一未磨耗钢材纹理。
+
+端头为独立 OBJ：外护轨在 0.4 m 内向中心内收 0.10 m；中央护轨在 1.8 m 内渐收至中心线 ±0.070 m，并以混凝土保护端头收口：顶面由后端轨面高度逐渐降至末端距枕木顶 15 mm，螺栓随斜面降低，所有部件均不高于轨面。`continuousGuard` 描述由本次配套客户端读取，按真实轨段端点放置；相连同型轨段的接缝不重复生成端头。道岔和平交使用该描述的 `turnout` 普通轨道模板，保留完整普通扣件；护轨额外承座随枕木一起调整。
+
+**兼容性：** 自动端头、接续合并和护轨样式的道岔模板切换需要 Point Advanced `0.1.4` 或更新版本；`0.1.3` 不具备这些功能。只装资源包时只有连续直段模型。资源包版本为 `0.1.1`。
+
+中央护轨本次内移后的模型仅做资源几何验证，未重新进游戏验证。

@@ -15,6 +15,11 @@ TEXTURE_DIR=ROOT/'assets/citizons_railway/textures/rail'
 CELL,GUTTER=256,8
 ATLAS_W,ATLAS_H=800,536
 GAUGE,HEAD_WIDTH,CENTER=1.435,.068,.7515
+# Both guard families stay between the running rails. The outer family sits
+# beside the running rail like the turnout check rail; the central family is
+# pulled toward the track centre.
+OUTER_GUARD_CENTER=CENTER-HEAD_WIDTH-.055  # FrogGeometry.guard / PointSettings.DEFAULT
+CENTER_GUARD_CENTER=.3900-HEAD_WIDTH/2
 TOP,BASE,SEAT=.264280,.099422,.085422
 BALLAST_SHOULDER=1.32
 BALLAST_TOE=1.85
@@ -133,19 +138,21 @@ class Obj:
         path.write_text('\n'.join(lines)+'\n',encoding='ascii')
         path.with_suffix('.mtl').write_text('newmtl mat\nKa 1 1 1\nKd 1 1 1\nKs 0.12 0.12 0.12\nNs 32\nd 1\nillum 2\nmap_Kd rail_atlas.png\n',encoding='ascii')
 
-def add_rail(obj,cx,profile):
-    obj.group='rail_right' if cx>0 else 'rail_left'
+def add_rail(obj,cx,profile,group_prefix='rail',caps=True,polished_head=True):
+    side='right' if cx>0 else 'left'
+    obj.group=f'{group_prefix}_{side}'
     if sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(profile,profile[1:]+profile[:1]))<0: profile=list(reversed(profile))
     for a,b in zip(profile,profile[1:]+profile[:1]):
         ps=[(cx+a[0],a[1],-.3),(cx+b[0],b[1],-.3),(cx+b[0],b[1],.3),(cx+a[0],a[1],.3)]
-        polished=min(a[1],b[1])>=TOP-.008
+        polished=polished_head and min(a[1],b[1])>=TOP-.008
         if polished: v0,v1=(a[0]+.034)/.068,(b[0]+.034)/.068
         else:
             v0,v1=(a[1]-BASE)/(TOP-BASE),(b[1]-BASE)/(TOP-BASE)
             if abs(v1-v0)<1e-8: v0,v1=0,.14
         obj.face(ps,'head' if polished else 'rail',[(0,v0),(0,v1),(1,v1),(1,v0)],(b[1]-a[1],a[0]-b[0],0))
-    obj.group+='_end'
-    for z in (-.3,.3): obj.face([(cx+x,y,z) for x,y in profile],'end',[((x+.07)/.14,(y-BASE)/(TOP-BASE)) for x,y in profile],(0,0,z))
+    if caps:
+        obj.group+= '_end'
+        for z in (-.3,.3): obj.face([(cx+x,y,z) for x,y in profile],'end',[((x+.07)/.14,(y-BASE)/(TOP-BASE)) for x,y in profile],(0,0,z))
 
 HIGH_PROFILE=[(-.070,BASE),(-.070,.108),(-.064,.113),(-.026,.124),(-.012,.134),(-.009,.145),(-.009,.207),
               (-.013,.219),(-.027,.225),(-.033,.231),(-.034,.239),(-.034,.254),(-.032,.260),(-.026,TOP),
@@ -154,6 +161,9 @@ HIGH_PROFILE=[(-.070,BASE),(-.070,.108),(-.064,.113),(-.026,.124),(-.012,.134),(
 MID_PROFILE=[HIGH_PROFILE[i] for i in (0,1,3,5,6,8,10,11,13,14,16,17,19,21,22,24,26,27)]
 LOW_PROFILE=[(-.070,BASE),(-.070,.111),(-.009,.135),(-.009,.219),(-.034,.232),(-.034,.254),(-.026,TOP),
              (.026,TOP),(.034,.254),(.034,.232),(.009,.219),(.009,.135),(.070,.111),(.070,BASE)]
+# Point Advanced uses the same steel section for a turnout check rail. Keep the
+# full I-section here too; only the lateral offset and the support hardware differ.
+GUARD_PROFILE=HIGH_PROFILE
 
 def sleeper_top(x):
     a=abs(x)
@@ -161,13 +171,13 @@ def sleeper_top(x):
     if a<=.93: return SEAT
     return SEAT-(a-.93)/.32*.012
 
-def add_sleeper(obj,z=0,detail=2):
+def add_sleeper(obj,z=0,detail=2,flat=False):
     obj.group='sleeper'; bottom=SEAT-.12
     xs=[-1.25,-1.22,-1.2,-.93,-.7515,-.6,-.53,-.40,-.27,-.13,0,.13,.27,.40,.53,.6,.7515,.93,1.2,1.22,1.25]
     if detail==0: xs=[-1.25,-1.2,-.93,-.6,-.53,0,.53,.6,.93,1.2,1.25]
     rings=[]
     for x in xs:
-        h=sleeper_top(x); w=.12 if abs(x)<1.22 else .105
+        h=SEAT if flat else sleeper_top(x); w=.12 if abs(x)<1.22 else .105
         rings.append([(x,bottom,z-w),(x,bottom,z+w),(x,h-.008,z+w-.009),(x,h,z+w-.019),(x,h,z-w+.019),(x,h-.008,z-w+.009)])
     for k in range(len(rings)-1):
         tile=math.floor((xs[k]+xs[k+1])/.6/2)
@@ -216,10 +226,11 @@ def add_clip(obj,cx,cz,side):
 
 def plate(obj,cx,cz,hx,hz,y0,y1,chamfer=.006,region='fastener'):
     outline=[(-hx+chamfer,-hz),(hx-chamfer,-hz),(hx,-hz+chamfer),(hx,hz-chamfer),(hx-chamfer,hz),(-hx+chamfer,hz),(-hx,hz-chamfer),(-hx,-hz+chamfer)]
+    if chamfer==0: outline=[(-hx,-hz),(hx,-hz),(hx,hz),(-hx,hz)]
     rings=[[(cx+x,y,cz+z) for x,z in outline] for y in (y0,y1)]
     for k in (0,1): obj.face(rings[k],region,[((x+hx)/(2*hx),(z+hz)/(2*hz)) for x,z in outline],(0,2*k-1,0))
-    for i in range(8):
-        j=(i+1)%8;ps=[rings[0][i],rings[0][j],rings[1][j],rings[1][i]]
+    for i in range(len(outline)):
+        j=(i+1)%len(outline);ps=[rings[0][i],rings[0][j],rings[1][j],rings[1][i]]
         obj.face(ps,region,[(0,0),(1,0),(1,1),(0,1)],(sum(p[0]-cx for p in ps),0,sum(p[2]-cz for p in ps)))
 
 def pressure_plate(obj,cx,cz,side):
@@ -235,8 +246,8 @@ def pressure_plate(obj,cx,cz,side):
         ps=[rings[0][i],rings[0][j],rings[1][j],rings[1][i]]
         obj.face(ps,'fastener',[(0,0),(1,0),(1,1),(0,1)],(side*(ny-y),x-nx,0))
 
-def add_fastener(obj,cx,cz=0,detail=2):
-    obj.group='fastener_right' if cx>0 else 'fastener_left' if cx<0 else 'fastener'
+def add_fastener(obj,cx,cz=0,detail=2,group_prefix='fastener'):
+    obj.group=group_prefix+'_right' if cx>0 else group_prefix+'_left' if cx<0 else group_prefix
     plate(obj,cx,cz,.076,.107,SEAT,BASE-.004,region='rubber')
     plate(obj,cx,cz,.075,.106,BASE-.004,BASE,region='pad')
     for sign in (-1,1):
@@ -253,6 +264,60 @@ def add_fastener(obj,cx,cz=0,detail=2):
             if detail>1:
                 for y in (.190,.194,.198):prism(obj,bolt,cz,.0108,.0108,y,y+.0015,sides=10)
             if detail>1: add_clip(obj,cx,cz,sign)
+
+def add_guard_fastener(obj,cx,running,cz=0,detail=2,group_prefix='guard_fastener'):
+    """Point Advanced style guardPair: shared base, running-rail cheek, ribs and bolt."""
+    obj.group=group_prefix+'_right' if cx>0 else group_prefix+'_left'
+    direction=1 if cx>running else -1
+    a,b=running-direction*.21,cx+direction*.20
+    plate(obj,(a+b)/2,cz,abs(b-a)/2,.108,SEAT,BASE,chamfer=0)
+    plate(obj,cx+direction*.0185,cz,.0055,.08,BASE+.036,BASE+.10,chamfer=0)
+    section=[(.024,0),(.145,0),(.145,.012),(.024,.095)]
+    for along in ((-.055,0,.055) if detail==2 else (0,)):
+        rings=[[(cx+direction*x,BASE+y,cz+along+z) for x,y in section] for z in (-.009,.009)]
+        for k in (0,1):
+            obj.face(rings[k],'fastener',[(x/.145,y/.095) for x,y in section],(0,0,2*k-1))
+        for i,(x,y) in enumerate(section):
+            j=(i+1)%4; nx,ny=section[j]
+            obj.face([rings[0][i],rings[0][j],rings[1][j],rings[1][i]],'fastener',[(0,0),(1,0),(1,1),(0,1)],(direction*(ny-y),x-nx,0))
+    bolt=cx+direction*.155
+    if detail==2: prism(obj,bolt,cz,.025,.025,BASE,BASE+.006,sides=10)
+    if detail>0: prism(obj,bolt,cz,.017,.017,BASE+.006,BASE+.027,sides=6)
+    if detail==2: prism(obj,bolt,cz,.008,.008,BASE+.027,BASE+.034,sides=8)
+
+
+def add_outer_clamp(obj,cx,detail):
+    """Same plane clipping as TurnoutFittings.outerClamp (footWidth * .28)."""
+    source=Obj('clamp'); add_fastener(source,cx,detail=detail)
+    sign=1 if cx>0 else -1
+    for index,(group,region,points,uv,normal) in enumerate(source.faces):
+        polygon=list(zip(points,uv)); clipped=[]
+        for (a,ta),(b,tb) in zip(polygon,polygon[1:]+polygon[:1]):
+            da,db=sign*(a[0]-cx)-.14*.28,sign*(b[0]-cx)-.14*.28
+            if da>=0: clipped.append((a,ta))
+            if (da<0<db) or (db<0<da):
+                t=da/(da-db)
+                clipped.append((tuple(x+(y-x)*t for x,y in zip(a,b)),tuple(x+(y-x)*t for x,y in zip(ta,tb))))
+        if len(clipped)<3: continue
+        ps,ts=map(list,zip(*clipped))
+        pieces=[tuple(range(len(ps)))] if len(ps)<=4 else triangles(ps)
+        for piece in pieces:
+            if index in source.smooth: obj.smooth.add(len(obj.faces))
+            obj.faces.append((group,region,[ps[i] for i in piece],[ts[i] for i in piece],normal))
+
+
+def add_center_fastener(obj,cx,detail):
+    """Independent compact bolted seats; do not bridge the wide central gap."""
+    obj.group='center_fastener_right' if cx>0 else 'center_fastener_left'
+    plate(obj,cx,0,.132,.105,SEAT,BASE-.004)
+    plate(obj,cx,0,.075,.102,BASE-.004,BASE,region='pad')
+    for sign in (-1,1):
+        plate(obj,cx+sign*.089,0,.039,.075,BASE+.014,BASE+.025,chamfer=.003)
+        if detail>0:
+            prism(obj,cx+sign*.106,0,.017,.017,BASE+.025,BASE+.045,sides=6)
+        if detail>1:
+            prism(obj,cx+sign*.106,0,.024,.024,BASE+.019,BASE+.025,sides=10)
+            prism(obj,cx+sign*.106,0,.008,.008,BASE+.045,BASE+.052,sides=8)
 
 def ballast_height(x,z):
     a=abs(x); center=.026+.008*(.5+.5*math.cos(math.tau*z/.6))
@@ -289,20 +354,87 @@ def add_ballast(obj,detail=2):
         obj.face([(a,bottom,-.3),(b,bottom,-.3),(b,bottom,.3),(a,bottom,.3)],'ballast',[(0,0),(1,0),(1,1),(0,1)],(0,-1,0))
     # The sloped sides meet the wider bottom directly: no vertical rectangular walls.
 
-def make_rail(name,profile,detail):
-    obj=Obj(name); add_ballast(obj,detail); add_sleeper(obj,detail=detail)
-    for center in (-CENTER,CENTER): add_fastener(obj,center,detail=detail); add_rail(obj,center,profile)
+def make_guard_endpoint(kind):
+    """Separate terminal asset: z=0 exposed tip, z=length straight handoff.
+
+    Never include this in the repeated 0.6 m model. Point places it once at a
+    genuinely exposed end, following the same grade/cant frames as the rails.
+    """
+    obj=Obj(kind+'_guard_endpoint')
+    length=.4 if kind=='outer' else 1.8
+    center=OUTER_GUARD_CENTER if kind=='outer' else CENTER_GUARD_CENTER
+    inset=.10 if kind=='outer' else center-.070
+    profile=list(reversed(GUARD_PROFILE))
+    for sign in (-1,1):
+        obj.group='terminal_left' if sign<0 else 'terminal_right'
+        def ring(z):
+            c=sign*(center-inset*(1-z/length))
+            return [(c+x,y,z) for x,y in profile]
+        # Subdivide the long central convergence so curved/pitched terminals can
+        # use the client's path frames without a single rigid diagonal beam.
+        # Central steel terminates underneath the protective nose; the nose
+        # projects ahead instead of leaving two silver rail ends protruding.
+        steel_start=0 if kind=='outer' else .55
+        steps=math.ceil((length-steel_start)/.1)
+        for k in range(steps):
+            a,b=ring(steel_start+(length-steel_start)*k/steps),ring(steel_start+(length-steel_start)*(k+1)/steps)
+            for i,(x,y) in enumerate(profile):
+                j=(i+1)%len(profile); nx,ny=profile[j]
+                polished=kind=='outer' and min(y,ny)>=TOP-.008
+                v0,v1=((x+.034)/.068,(nx+.034)/.068) if polished else ((y-BASE)/(TOP-BASE),(ny-BASE)/(TOP-BASE))
+                if abs(v1-v0)<1e-8: v0,v1=0,.14
+                obj.face([a[i],a[j],b[j],b[i]],'head' if polished else 'rail',[(0,v0),(0,v1),(1,v1),(1,v0)],(ny-y,x-nx,-sign*inset/length*(ny-y)))
+        obj.face(ring(steel_start),'end',[((x+.07)/.14,(y-BASE)/(TOP-BASE)) for x,y in profile],(0,0,-1))
+    if kind=='center':
+        # Blunt protective closure bridging the two converging rails, with a
+        # sloping top and broad rear shoulder like the supplied photograph.
+        obj.group='terminal_nose'
+        nose_tip=SEAT+.015
+        a=[(-.055,SEAT,0),(.055,SEAT,0),(.045,nose_tip,0),(-.045,nose_tip,0)]
+        b=[(-.238,SEAT,.55),(.238,SEAT,.55),(.230,TOP,.55),(-.230,TOP,.55)]
+        for i,outward in enumerate(((0,-1,0),(1,0,0),(0,1,0),(-1,0,0))):
+            j=(i+1)%4
+            obj.face([a[i],a[j],b[j],b[i]],'concrete',[(0,0),(1,0),(1,1),(0,1)],outward)
+        for ring_,outward in ((a,(0,0,-1)),(b,(0,0,1))):
+            obj.face(ring_,'concrete',[(0,0),(1,0),(1,1),(0,1)],outward)
+        for sign in (-1,1):
+            bolt_seat=nose_tip+(TOP-nose_tip)*(.44/.55)
+            prism(obj,sign*.13,.44,.018,.018,bolt_seat-.006,bolt_seat+.009,sides=6)
+    obj.save(MODEL_DIR/f'{obj.name}.obj')
+    return obj
+
+def make_rail(name,profile,detail,kind='mainline'):
+    obj=Obj(name); add_ballast(obj,detail); add_sleeper(obj,detail=detail,flat=kind=='center')
+    for center in (-CENTER,CENTER):
+        if kind=='outer': add_outer_clamp(obj,center,detail)
+        else: add_fastener(obj,center,detail=detail)
+        add_rail(obj,center,profile)
+    if kind in ('outer','center'):
+        centers=(-OUTER_GUARD_CENTER,OUTER_GUARD_CENTER) if kind=='outer' else (-CENTER_GUARD_CENTER,CENTER_GUARD_CENTER)
+        prefix='outer_guard' if kind=='outer' else 'center_guard'
+        fitting='outer_fastener' if kind=='outer' else 'center_fastener'
+        for center in centers:
+            if kind=='outer': add_guard_fastener(obj,center,(-CENTER if center<0 else CENTER),detail=detail,group_prefix=fitting)
+            else: add_center_fastener(obj,center,detail)
+            add_rail(obj,center,GUARD_PROFILE,prefix,caps=False,polished_head=kind!='center')
     obj.save(MODEL_DIR/f'{name}.obj'); return obj
 
 def main():
     MODEL_DIR.mkdir(parents=True,exist_ok=True); TEXTURE_DIR.mkdir(parents=True,exist_ok=True); build_atlas()
     # Preserve identical steel sections across LOD boundaries so joined rails cannot crack.
-    for name,profile,detail in (('rail_high',HIGH_PROFILE,2),('rail_mid',HIGH_PROFILE,1),('rail_low',HIGH_PROFILE,0)):
-        model=make_rail(name,profile,detail); print(name,len(model.faces),'faces')
+    for name,profile,detail,kind in (
+            ('rail_high',HIGH_PROFILE,2,'mainline'),('rail_mid',HIGH_PROFILE,1,'mainline'),('rail_low',HIGH_PROFILE,0,'mainline'),
+            ('outer_guard_high',HIGH_PROFILE,2,'outer'),('outer_guard_mid',HIGH_PROFILE,1,'outer'),('outer_guard_low',HIGH_PROFILE,0,'outer'),
+            ('center_guard_high',HIGH_PROFILE,2,'center'),('center_guard_mid',HIGH_PROFILE,1,'center'),('center_guard_low',HIGH_PROFILE,0,'center')):
+        model=make_rail(name,profile,detail,kind); print(name,len(model.faces),'faces')
     sleeper=Obj('sleeper'); add_sleeper(sleeper); sleeper.save(MODEL_DIR/'sleeper.obj')
     fitting=Obj('fastener'); add_fastener(fitting,0); fitting.save(MODEL_DIR/'fastener.obj')
+    for kind in ('outer','center'): make_guard_endpoint(kind)
     style=ROOT/'assets/mtrsteamloco/rails/citizons_railway.json'; data=json.loads(style.read_text(encoding='utf-8-sig'))
-    data['citizons_mainline_1435'].update(repeatInterval=.6,flipV=True,yOffset=0.0)
+    data.pop('citizons_guarded_1435',None)
+    data['citizons_mainline_1435'].update(name='Citizons 高仿真钢轨1435mm',repeatInterval=.6,flipV=True,yOffset=0.0)
+    data['citizons_outer_guard_1435']={'name':'Citizons 高仿真钢轨(外护轨) 1435mm','model':'citizons_railway:models/rail/outer_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_center_guard_1435']={'name':'Citizons 高仿真钢轨(中央护轨) 1435mm','model':'citizons_railway:models/rail/center_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
     style.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     descriptor=ROOT/'assets/citizons_railway/rail_profiles/citizons_mainline_1435.json'
     data=json.loads(descriptor.read_text(encoding='utf-8-sig'))
@@ -311,6 +443,26 @@ def main():
     data['modelGroups']={'rail':['rail_right'],'sleeper':['sleeper'],'fastener':['fastener_right'],'preserve':['ballast'],'supports':['sleeper','fastener_left','fastener_right']}
     data['alignEndpointSleepers']=True
     descriptor.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    for style_id,prefix,fitting in (('citizons_outer_guard_1435','outer_guard','outer_fastener'),('citizons_center_guard_1435','center_guard','center_fastener')):
+        variant=json.loads(json.dumps(data)); variant['style']=style_id
+        variant['model']=f'citizons_railway:models/rail/{prefix}_high.obj'
+        variant['lod']['near']['model']=f'citizons_railway:models/rail/{prefix}_high.obj'
+        variant['lod']['mid']['model']=f'citizons_railway:models/rail/{prefix}_mid.obj'
+        variant['lod']['far']['model']=f'citizons_railway:models/rail/{prefix}_low.obj'
+        variant['lod']['note']='Continuous guard steel and separate terminals share the same section at every LOD.'
+        variant['continuousGuard']={
+            'groups':[prefix+'_left',prefix+'_right'],
+            'supportGroups':[fitting+'_left',fitting+'_right'],
+            'supportInset':.10 if prefix=='outer_guard' else CENTER_GUARD_CENTER-.070,
+            'supportMode':'shared' if prefix=='outer_guard' else 'independent',
+            'noseLength':0 if prefix=='outer_guard' else .55,
+            'endpointModel':f'citizons_railway:models/rail/{prefix}_endpoint.obj',
+            'endpointLength':.4 if prefix=='outer_guard' else 1.8,
+            'turnout':{'model':data['model'],'modelGroups':data['modelGroups'],'lod':data['lod']}}
+        variant['modelGroups']['rail']=['rail_right']
+        variant['modelGroups']['fastener']=['fastener_right']
+        variant['modelGroups']['supports']=['sleeper','fastener_left','fastener_right',fitting+'_left',fitting+'_right']
+        (ROOT/f'assets/citizons_railway/rail_profiles/{style_id}.json').write_text(json.dumps(variant,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
     for path in (ROOT/'assets/citizons_railway/rail_lod.json',ROOT/'assets/citizons_railway/rail_profiles/citizons_mainline_1435.json'):
         data=json.loads(path.read_text(encoding='utf-8-sig')); lod=data.get('lod',data)
         data['style']='citizons_mainline_1435'

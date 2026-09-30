@@ -1,5 +1,5 @@
 {
-  "scope": "Resource geometry checks; client adapter tested by mod regression and isolated runtime",
+  "scope": "Exported resource geometry and deterministic rebuild; runtime validation is reported separately",
   "models": {
     "rail_high": {
       "faces": 4600,
@@ -43,18 +43,129 @@
         "rail_right_end"
       ]
     },
-    "sleeper": {
-      "faces": 156,
-      "vertices": 560,
+    "outer_guard_high": {
+      "faces": 2892,
+      "vertices": 9320,
       "groups": [
-        "sleeper"
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end",
+        "outer_fastener_left",
+        "outer_guard_left",
+        "outer_fastener_right",
+        "outer_guard_right"
       ]
     },
-    "fastener": {
-      "faces": 1966,
-      "vertices": 6092,
+    "outer_guard_mid": {
+      "faces": 980,
+      "vertices": 3440,
       "groups": [
-        "fastener"
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end",
+        "outer_fastener_left",
+        "outer_guard_left",
+        "outer_fastener_right",
+        "outer_guard_right"
+      ]
+    },
+    "outer_guard_low": {
+      "faces": 704,
+      "vertices": 2488,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end",
+        "outer_fastener_left",
+        "outer_guard_left",
+        "outer_fastener_right",
+        "outer_guard_right"
+      ]
+    },
+    "center_guard_high": {
+      "faces": 5028,
+      "vertices": 15980,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end",
+        "center_fastener_left",
+        "center_guard_left",
+        "center_fastener_right",
+        "center_guard_right"
+      ]
+    },
+    "center_guard_mid": {
+      "faces": 1420,
+      "vertices": 4940,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end",
+        "center_fastener_left",
+        "center_guard_left",
+        "center_fastener_right",
+        "center_guard_right"
+      ]
+    },
+    "center_guard_low": {
+      "faces": 960,
+      "vertices": 3340,
+      "groups": [
+        "ballast",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end",
+        "center_fastener_left",
+        "center_guard_left",
+        "center_fastener_right",
+        "center_guard_right"
+      ]
+    },
+    "outer_guard_endpoint": {
+      "faces": 276,
+      "length": 0.4,
+      "groups": [
+        "terminal_left",
+        "terminal_right"
+      ]
+    },
+    "center_guard_endpoint": {
+      "faces": 816,
+      "length": 1.8,
+      "groups": [
+        "terminal_left",
+        "terminal_right",
+        "terminal_nose"
       ]
     }
   },

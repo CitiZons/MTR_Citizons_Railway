@@ -1,6 +1,7 @@
 """Blender preview of the actual generated OBJ/atlas, including ground occlusion."""
 from pathlib import Path
 import math
+import sys
 import bpy
 from mathutils import Vector
 
@@ -39,7 +40,9 @@ bsdf=mat.node_tree.nodes.new('ShaderNodeBsdfPrincipled'); bsdf.inputs['Roughness
 output=mat.node_tree.nodes.new('ShaderNodeOutputMaterial'); mat.node_tree.links.new(bsdf.outputs['BSDF'],output.inputs['Surface'])
 tex=mat.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=bpy.data.images.load(str(MODEL/'rail_atlas.png'))
 tex.interpolation='Linear'; mat.node_tree.links.new(tex.outputs['Color'],bsdf.inputs['Base Color'])
-source=load_obj(MODEL/'rail_high.obj','Rail cell'); source.data.materials.append(mat)
+guard_preview='--guards' in sys.argv
+endpoint_preview='--endpoints' in sys.argv
+source=load_obj(MODEL/('outer_guard_high.obj' if guard_preview else 'rail_high.obj'),'Rail cell'); source.data.materials.append(mat)
 cells=[source]
 for i in range(-5,6):
     if i==0: continue
@@ -63,12 +66,30 @@ def render(name,location,target,scale):
     camera.data.type='ORTHO'; camera.data.ortho_scale=scale
     scene.render.filepath=str(OUT/name); bpy.ops.render.render(write_still=True)
 
-render('track-overview.png',(3.6,-4.0,3.5),(0,0,.1),6.8)
-render('sleeper-material-close.png',(1.6,-1.7,1.35),(0,0,.10),2.9)
-for obj in cells:
-    if obj!=source: obj.hide_render=True
-ground.hide_render=True
-render('rail-section.png',(1.15,-1.3,.8),(.7515,0,.185),.52)
-render('fastener-top.png',(.7515,-.12,1.1),(.7515,0,.12),.48)
-render('ballast-cross-section.png',(0,-6,.18),(0,0,-.03),4.3)
-bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'railway-preview.blend'))
+if endpoint_preview:
+    for obj in cells: obj.hide_render=True
+    ground.hide_render=True
+    for kind,length,scale in (('outer',.4,1.9),('center',1.8,2.5)):
+        endpoint=load_obj(MODEL/f'{kind}_guard_endpoint.obj',kind+' terminal'); endpoint.data.materials.append(mat)
+        render(kind+'-guard-terminal.png',(1.7,-2.9,2.0),(0,-length/2,.18),scale)
+        render(kind+'-guard-terminal-top.png',(0,-length/2,4),(0,-length/2,.18),scale)
+        if kind=='center': render('center-guard-terminal-side.png',(4,-length/2,.18),(0,-length/2,.18),2.15)
+        endpoint.hide_render=True
+elif guard_preview:
+    render('outer-guard-overview.png',(3.6,-4.0,3.5),(0,0,.1),6.8)
+    render('outer-guard-support-close.png',(-.3,-1.0,.85),(.61,0,.14),.9)
+    center=load_obj(MODEL/'center_guard_high.obj','Central guard cell'); center.data.materials.append(mat)
+    for obj in cells: obj.data=center.data
+    bpy.data.objects.remove(center,do_unlink=True)
+    render('center-guard-overview.png',(3.6,-4.0,3.5),(0,0,.1),6.8)
+    render('center-guard-support-close.png',(-.15,-1.2,1.0),(.4,0,.12),1.1)
+else:
+    render('track-overview.png',(3.6,-4.0,3.5),(0,0,.1),6.8)
+    render('sleeper-material-close.png',(1.6,-1.7,1.35),(0,0,.10),2.9)
+    for obj in cells:
+        if obj!=source: obj.hide_render=True
+    ground.hide_render=True
+    render('rail-section.png',(1.15,-1.3,.8),(.7515,0,.185),.52)
+    render('fastener-top.png',(.7515,-.12,1.1),(.7515,0,.12),.48)
+    render('ballast-cross-section.png',(0,-6,.18),(0,0,-.03),4.3)
+    bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'railway-preview.blend'))
