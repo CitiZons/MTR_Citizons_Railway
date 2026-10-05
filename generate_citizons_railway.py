@@ -25,6 +25,9 @@ BALLAST_SHOULDER=1.32
 BALLAST_TOE=1.85
 # Maximum local thickness is 350 mm; keep the existing rail and shoulder datum.
 BALLAST_BOTTOM=.046-.35
+TRACK_BED_TOP=SEAT-(.005*.7)
+TRACK_BED_BOTTOM=TRACK_BED_TOP-.35
+SLAB_BED_BOTTOM=TRACK_BED_TOP-.35
 REGIONS={'rail':(0,0),'head':(1,0),'end':(2,0),'concrete':(0,1),'fastener':(1,1),'ballast':(2,1)}
 REGIONS.update(pad=(1,1),rubber=(1,1))
 REGION_BOUNDS={'fastener':(0,0,.75,1),'pad':(.84,.62,.98,.98),'rubber':(.84,.02,.98,.38)}
@@ -354,6 +357,55 @@ def add_ballast(obj,detail=2):
         obj.face([(a,bottom,-.3),(b,bottom,-.3),(b,bottom,.3),(a,bottom,.3)],'ballast',[(0,0),(1,0),(1,1),(0,1)],(0,-1,0))
     # The sloped sides meet the wider bottom directly: no vertical rectangular walls.
 
+def add_slab_bed(obj,detail=2):
+    """350 mm continuous foundation under the independent concrete sleepers."""
+    obj.group='slab_bed'
+    top=TRACK_BED_TOP; bottom=SLAB_BED_BOTTOM
+    # A flat foundation separates the recessed rail seat from its raised shoulders.
+    section=[(-1.55,top),(-1.51,top),(-1.08,top),
+             (-1.04,top),(-.48,top),(-.44,top),(.44,top),
+             (.48,top),(1.04,top),(1.08,top),(1.51,top),(1.55,top)]
+    uv=[(0,0),(1,0),(1,1),(0,1)]
+    for (x0,y0),(x1,y1) in zip(section,section[1:]):
+        obj.face([(x0,y0,-.3),(x1,y1,-.3),(x1,y1,.3),(x0,y0,.3)],'concrete',uv,(y0-y1,x1-x0,0))
+        obj.face([(x0,bottom,-.3),(x1,bottom,-.3),(x1,bottom,.3),(x0,bottom,.3)],'concrete',uv,(0,-1,0))
+        for z in (-.3,.3):
+            obj.face([(x0,bottom,z),(x1,bottom,z),(x1,y1,z),(x0,y0,z)],'concrete',uv,(0,0,z))
+    for x,y in (section[0],section[-1]):
+        obj.face([(x,bottom,-.3),(x,y,-.3),(x,y,.3),(x,bottom,.3)],'concrete',uv,(x,0,0))
+
+def add_direct_bearers(obj,detail=2):
+    """Two independent longitudinal concrete strips for direct slab track."""
+    obj.group='direct_bearer'
+    for cx in (-CENTER,CENTER):
+        # Keep a clear gap between the strips. Each strip spans the full model
+        # cell in the track direction, so adjacent cells read as two railside
+        # supports rather than isolated pads.
+        # Wider than the original rail seat and raised slightly into the
+        # fastening base so there is no visible gap below the hardware.
+        plate(obj,cx,0,.145*1.8,.300,TRACK_BED_BOTTOM,SEAT+.006,chamfer=0,region='concrete')
+
+def curved_sleeper_block(obj,cx,hx,hz,y0,y1):
+    """Extruded rounded shoulder section used by the visible concrete blocks."""
+    # Recessed central rail seat with raised shoulders outside the fastening.
+    section=[(-hx,y0),(hx,y0),(hx-.015,y1+.012),(hx-.055,y1+.042),
+             (hx-.095,y1+.042),(.205,y1),(-.205,y1),
+             (-hx+.095,y1+.042),(-hx+.055,y1+.042),(-hx+.015,y1+.012)]
+    rings=[[(cx+x,y,z) for x,y in section] for z in (-hz,hz)]
+    cap_uv=[((x+hx)/(2*hx),(y-y0)/(y1+.042-y0)) for x,y in section]
+    for ring,outward in ((rings[0],(0,0,-1)),(rings[1],(0,0,1))):
+        obj.face(ring,'concrete',cap_uv,outward)
+    for i in range(len(section)):
+        j=(i+1)%len(section)
+        obj.face([rings[0][i],rings[0][j],rings[1][j],rings[1][i]],'concrete',[(0,0),(1,0),(1,1),(0,1)],(section[j][1]-section[i][1],section[i][0]-section[j][0],0))
+
+def add_block_supports(obj,detail=2):
+    """RHEDA-like twin concrete support blocks, embedded in the slab."""
+    obj.group='sleeper'
+    for cx in (-CENTER,CENTER):
+        hx=.34; hz=.107; y0=TRACK_BED_TOP; y1=SEAT
+        curved_sleeper_block(obj,cx,hx,hz,y0,y1)
+
 def make_guard_endpoint(kind):
     """Separate terminal asset: z=0 exposed tip, z=length straight handoff.
 
@@ -404,7 +456,12 @@ def make_guard_endpoint(kind):
     return obj
 
 def make_rail(name,profile,detail,kind='mainline'):
-    obj=Obj(name); add_ballast(obj,detail); add_sleeper(obj,detail=detail,flat=kind=='center')
+    obj=Obj(name)
+    if kind=='slab': add_slab_bed(obj,detail)
+    elif kind!='direct': add_ballast(obj,detail)
+    if kind=='slab': add_block_supports(obj,detail)
+    elif kind=='direct': add_direct_bearers(obj,detail)
+    else: add_sleeper(obj,detail=detail,flat=kind=='center')
     for center in (-CENTER,CENTER):
         if kind=='outer': add_outer_clamp(obj,center,detail)
         else: add_fastener(obj,center,detail=detail)
@@ -425,16 +482,20 @@ def main():
     for name,profile,detail,kind in (
             ('rail_high',HIGH_PROFILE,2,'mainline'),('rail_mid',HIGH_PROFILE,1,'mainline'),('rail_low',HIGH_PROFILE,0,'mainline'),
             ('outer_guard_high',HIGH_PROFILE,2,'outer'),('outer_guard_mid',HIGH_PROFILE,1,'outer'),('outer_guard_low',HIGH_PROFILE,0,'outer'),
-            ('center_guard_high',HIGH_PROFILE,2,'center'),('center_guard_mid',HIGH_PROFILE,1,'center'),('center_guard_low',HIGH_PROFILE,0,'center')):
+            ('center_guard_high',HIGH_PROFILE,2,'center'),('center_guard_mid',HIGH_PROFILE,1,'center'),('center_guard_low',HIGH_PROFILE,0,'center'),
+            ('slab_high',HIGH_PROFILE,2,'slab'),('slab_mid',HIGH_PROFILE,1,'slab'),('slab_low',HIGH_PROFILE,0,'slab'),
+            ('direct_high',HIGH_PROFILE,2,'direct'),('direct_mid',HIGH_PROFILE,1,'direct'),('direct_low',HIGH_PROFILE,0,'direct')):
         model=make_rail(name,profile,detail,kind); print(name,len(model.faces),'faces')
     sleeper=Obj('sleeper'); add_sleeper(sleeper); sleeper.save(MODEL_DIR/'sleeper.obj')
     fitting=Obj('fastener'); add_fastener(fitting,0); fitting.save(MODEL_DIR/'fastener.obj')
     for kind in ('outer','center'): make_guard_endpoint(kind)
     style=ROOT/'assets/mtrsteamloco/rails/citizons_railway.json'; data=json.loads(style.read_text(encoding='utf-8-sig'))
     data.pop('citizons_guarded_1435',None)
-    data['citizons_mainline_1435'].update(name='Citizons 高仿真钢轨1435mm',repeatInterval=.6,flipV=True,yOffset=0.0)
-    data['citizons_outer_guard_1435']={'name':'Citizons 高仿真钢轨(外护轨) 1435mm','model':'citizons_railway:models/rail/outer_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
-    data['citizons_center_guard_1435']={'name':'Citizons 高仿真钢轨(中央护轨) 1435mm','model':'citizons_railway:models/rail/center_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_mainline_1435'].update(name='Citizons 高仿真钢轨 有砟 1435mm',repeatInterval=.6,flipV=True,yOffset=0.0)
+    data['citizons_outer_guard_1435']={'name':'Citizons 高仿真钢轨(外护轨) 有砟 1435mm','model':'citizons_railway:models/rail/outer_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_center_guard_1435']={'name':'Citizons 高仿真钢轨(中央护轨) 有砟 1435mm','model':'citizons_railway:models/rail/center_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_slab_1435']={'name':'Citizons 高仿真钢轨 无砟 有枕 1435mm','model':'citizons_railway:models/rail/slab_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_direct_1435']={'name':'Citizons 高仿真钢轨 无砟 无枕 1435mm','model':'citizons_railway:models/rail/direct_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
     style.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     descriptor=ROOT/'assets/citizons_railway/rail_profiles/citizons_mainline_1435.json'
     data=json.loads(descriptor.read_text(encoding='utf-8-sig'))
@@ -463,6 +524,22 @@ def main():
         variant['modelGroups']['fastener']=['fastener_right']
         variant['modelGroups']['supports']=['sleeper','fastener_left','fastener_right',fitting+'_left',fitting+'_right']
         (ROOT/f'assets/citizons_railway/rail_profiles/{style_id}.json').write_text(json.dumps(variant,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+    slab=json.loads(json.dumps(data)); slab['style']='citizons_slab_1435'; slab['model']='citizons_railway:models/rail/slab_high.obj'
+    for level,prefix in (('near','slab_high'),('mid','slab_mid'),('far','slab_low')): slab['lod'][level]['model']=f'citizons_railway:models/rail/{prefix}.obj'
+    slab['modelGroups']={'rail':['rail_right'],'sleeper':['sleeper'],'fastener':['fastener_right'],'preserve':['slab_bed'],'supports':['sleeper','fastener_left','fastener_right']}
+    slab['trackBed']='slab'; slab['ballast']=False; slab['sleeperStyle']='flat'; slab['flatSleeper']=True
+    slab['shapedSleepers']=True
+    slab['turnoutFallbackStyle']='citizons_slab_1435'; slab['crossingFallbackStyle']='citizons_slab_1435'
+    slab['covers']=['plain','turnout','diamond','three_way','scissors']
+    (ROOT/'assets/citizons_railway/rail_profiles/citizons_slab_1435.json').write_text(json.dumps(slab,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+    direct=json.loads(json.dumps(slab)); direct['style']='citizons_direct_1435'; direct['model']='citizons_railway:models/rail/direct_high.obj'
+    for level,prefix in (('near','direct_high'),('mid','direct_mid'),('far','direct_low')): direct['lod'][level]['model']=f'citizons_railway:models/rail/{prefix}.obj'
+    direct['modelGroups']={'rail':['rail_right'],'sleeper':['direct_bearer'],'fastener':['fastener_right'],'preserve':['direct_bearer'],'supports':['fastener_left','fastener_right']}
+    direct['continuousSupports']=True
+    direct.pop('shapedSleepers',None)
+    direct['trackBed']='direct'; direct['ballast']=False; direct['sleeperStyle']='none'; direct['flatSleeper']=False
+    direct['turnoutFallbackStyle']='citizons_direct_1435'; direct['crossingFallbackStyle']='citizons_direct_1435'
+    (ROOT/'assets/citizons_railway/rail_profiles/citizons_direct_1435.json').write_text(json.dumps(direct,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
     for path in (ROOT/'assets/citizons_railway/rail_lod.json',ROOT/'assets/citizons_railway/rail_profiles/citizons_mainline_1435.json'):
         data=json.loads(path.read_text(encoding='utf-8-sig')); lod=data.get('lod',data)
         data['style']='citizons_mainline_1435'

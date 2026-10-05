@@ -8,13 +8,13 @@
 
 当前版本为 `0.1.1`，与 MTR Railway Point Advanced `0.1.4` 配套。包内 `VERSION` 是发布版本的唯一来源，资源包列表描述和带版本 ZIP 由打包脚本同步生成。Minecraft 的 `pack_format: 15` 是资源格式版本，与发布版本独立。
 
-本次发布新增 `Citizons 高仿真钢轨(外护轨) 1435mm` 与 `Citizons 高仿真钢轨(中央护轨) 1435mm` 样式，普通样式保持不变。Point Advanced `0.1.4` 负责连续护轨、独立端头和道岔模板切换，并沿用平顶多轨岔枕、固定滑床板、岔心共用底板及护轨／翼轨共用承座。普通轨枕仍保留中央下凹。见 [CHANGELOG.md](CHANGELOG.md)。
+本次发布统一有砟轨道名称，并新增 `Citizons 高仿真钢轨 无砟 有枕 1435mm`；该样式使用连续混凝土板和无中央下凹的轨枕，普通、平交和道岔适配共用这一种无砟样式。见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 安装
 
 1. 将 [dist/Citizons_Railway-0.1.1.zip](dist/Citizons_Railway-0.1.1.zip) 放入游戏实例的 `resourcepacks` 并启用；兼容文件名 `dist/Citizons_Railway.zip` 内容完全相同。开发时也可直接使用 `resourcepacks/Citizons_Railway-0.1.1` 文件夹。
 2. 安装 MTR Railway Point Advanced `0.1.4`。普通轨道与道岔一致的材质、连续坡面、枕木接缝调整、翼轨承座、护轨端头和自动细节切换需要该版本客户端。
-3. 选择 `Citizons 高仿真钢轨1435mm` 样式。曾手动锁定其他道岔轨型时，在编辑器中改回自动或 Citizons 样式；不要同时安装多份 Point Advanced JAR。
+3. 选择 `Citizons 高仿真钢轨 有砟 1435mm` 样式。曾手动锁定其他道岔轨型时，在编辑器中改回自动或 Citizons 样式；不要同时安装多份 Point Advanced JAR。
 
 4 m 内使用完整扣件，4–12 m 使用简化扣件，12 m 外保留低细节轮廓，无需手动切换样式。三档完整单元面数为 4600 / 1176 / 756；单独启用资源包时，MTR 使用入口中的高细节 OBJ。
 
@@ -102,3 +102,4 @@ python package_release.py
 **兼容性：** 自动端头、接续合并和护轨样式的道岔模板切换需要 Point Advanced `0.1.4` 或更新版本；`0.1.3` 不具备这些功能。只装资源包时只有连续直段模型。资源包版本为 `0.1.1`。
 
 中央护轨本次内移后的模型仅做资源几何验证，未重新进游戏验证。
+

@@ -1,0 +1,62 @@
+{
+  "style": "citizons_direct_1435",
+  "track": true,
+  "gauge": 1.435,
+  "top": 0.26428,
+  "headWidth": 0.068,
+  "footWidth": 0.14,
+  "railHeight": 0.165,
+  "steelTexture": "citizons_railway:textures/rail/steel.png",
+  "sleeperTexture": "citizons_railway:textures/rail/concrete.png",
+  "model": "citizons_railway:models/rail/direct_high.obj",
+  "steelEndTexture": "citizons_railway:textures/rail/steel_end.png",
+  "lod": {
+    "near": {
+      "model": "citizons_railway:models/rail/direct_high.obj",
+      "maxDistance": 4
+    },
+    "mid": {
+      "model": "citizons_railway:models/rail/direct_mid.obj",
+      "maxDistance": 12
+    },
+    "far": {
+      "model": "citizons_railway:models/rail/direct_low.obj",
+      "maxDistance": 128
+    },
+    "selection": "distance",
+    "note": "Point Advanced client: full details within 4 m, simplified fittings within 12 m, low detail beyond; continuous rail sections."
+  },
+  "modelGroups": {
+    "rail": [
+      "rail_right"
+    ],
+    "sleeper": [
+      "direct_bearer"
+    ],
+    "fastener": [
+      "fastener_right"
+    ],
+    "preserve": [
+      "direct_bearer"
+    ],
+    "supports": [
+      "fastener_left",
+      "fastener_right"
+    ]
+  },
+  "alignEndpointSleepers": true,
+  "trackBed": "direct",
+  "ballast": false,
+  "sleeperStyle": "none",
+  "flatSleeper": false,
+  "turnoutFallbackStyle": "citizons_direct_1435",
+  "crossingFallbackStyle": "citizons_direct_1435",
+  "covers": [
+    "plain",
+    "turnout",
+    "diamond",
+    "three_way",
+    "scissors"
+  ],
+  "continuousSupports": true
+}

@@ -151,6 +151,87 @@
         "center_guard_right"
       ]
     },
+    "slab_high": {
+      "faces": 4190,
+      "vertices": 13080,
+      "groups": [
+        "slab_bed",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "slab_mid": {
+      "faces": 934,
+      "vertices": 3192,
+      "groups": [
+        "slab_bed",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "slab_low": {
+      "faces": 590,
+      "vertices": 2024,
+      "groups": [
+        "slab_bed",
+        "sleeper",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "direct_high": {
+      "faces": 4104,
+      "vertices": 12768,
+      "groups": [
+        "direct_bearer",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "direct_mid": {
+      "faces": 848,
+      "vertices": 2880,
+      "groups": [
+        "direct_bearer",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
+    "direct_low": {
+      "faces": 504,
+      "vertices": 1712,
+      "groups": [
+        "direct_bearer",
+        "fastener_left",
+        "rail_left",
+        "rail_left_end",
+        "fastener_right",
+        "rail_right",
+        "rail_right_end"
+      ]
+    },
     "outer_guard_endpoint": {
       "faces": 276,
       "length": 0.4,
@@ -173,6 +254,9 @@
   "railTop": 0.26428,
   "repeatInterval": 0.6,
   "sleeperCenterDepression": 0.035111,
+  "trackBedTop": 0.081922,
+  "trackBedBottom": -0.268078,
+  "slabBedBottom": -0.268078,
   "ballastPlateauMin": 0.026,
   "ballastBottom": -0.304,
   "ballastMaximumThickness": 0.35,

@@ -25,7 +25,7 @@ def read(path):
     return faces
 
 style=json.loads((PACK/'assets/mtrsteamloco/rails/citizons_railway.json').read_text(encoding='utf8'))
-assert set(style)=={'citizons_mainline_1435','citizons_outer_guard_1435','citizons_center_guard_1435'}
+assert set(style)=={'citizons_mainline_1435','citizons_outer_guard_1435','citizons_center_guard_1435','citizons_slab_1435','citizons_direct_1435'}
 for settings in style.values(): assert settings['flipV'] is True and settings['repeatInterval']==.6
 for path in PACK.rglob('*.json'): json.loads(path.read_text(encoding='utf-8-sig'))
 for path in MODEL.glob('*.mtl'):
@@ -33,7 +33,7 @@ for path in MODEL.glob('*.mtl'):
         if line.startswith('map_Kd '): assert (path.parent/line.split(' ',1)[1]).is_file()
 
 report={'scope':'Exported resource geometry and deterministic rebuild; runtime validation is reported separately','models':{}}
-for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_mid','outer_guard_low','center_guard_high','center_guard_mid','center_guard_low','outer_guard_endpoint','center_guard_endpoint','sleeper','fastener'):
+for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_mid','outer_guard_low','center_guard_high','center_guard_mid','center_guard_low','slab_high','slab_mid','slab_low','direct_high','direct_mid','direct_low','outer_guard_endpoint','center_guard_endpoint','sleeper','fastener'):
     faces=read(MODEL/f'{name}.obj'); groups=defaultdict(list)
     for group,points,uv,normals in faces:
         assert 3<=len(points)<=4
@@ -44,6 +44,15 @@ for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_m
         uv_area=sum((uv[i,0]-uv[0,0])*(uv[i+1,1]-uv[0,1])-(uv[i,1]-uv[0,1])*(uv[i+1,0]-uv[0,0]) for i in range(1,len(uv)-1))
         assert abs(uv_area)>1e-12,(name,group,'collapsed UV')
         groups[group].append((points,uv))
+    if name.startswith('slab_'):
+        bed=np.concatenate([p for p,_ in groups['slab_bed']]); top=builder.TRACK_BED_TOP
+        assert abs(bed[:,1].min()-builder.SLAB_BED_BOTTOM)<1e-8,'Concrete bed must retain 350 mm thickness'
+        center=bed[np.abs(bed[:,0])<.45]
+        assert center[:,1].max()<=top+1e-8,'Slab centre must not rise above its top plane'
+        assert any(abs(n[0,2])>.1 for g,p,u,n in faces if g=='slab_bed'),'Bed side faces missing'
+        for z in (-.3,.3):
+            caps=[p for p,u in groups['slab_bed'] if np.allclose(p[:,2],z)]
+            assert caps and min(p[:,1].min() for p in caps)==bed[:,1].min(),'Textured bed end missing'
     if name.endswith('_endpoint'):
         points=np.concatenate([p for _,p,_,_ in faces]); length=.4 if name.startswith('outer') else 1.8
         assert points[:,1].max()<=builder.TOP+1e-8,'Terminal or bolt exceeds running rail top'
@@ -67,6 +76,29 @@ for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_m
                         pixels=uv*np.array([800,536])
                         assert np.all(pixels[:,0]<264),'Central terminal retains polished rail-head material'
         report['models'][name]={'faces':len(faces),'length':length,'groups':list(groups)}
+    elif name.startswith('slab_'):
+        allp=np.concatenate([p for _,p,_,_ in faces]); assert abs(allp[:,2].min()+.3)<1e-8 and abs(allp[:,2].max()-.3)<1e-8
+        assert 'slab_bed' in groups and 'ballast' not in groups
+        slab=np.concatenate([p for p,_ in groups['slab_bed']]); assert slab[:,1].max()<=builder.TRACK_BED_TOP+1e-8
+        sleeper=np.concatenate([p for p,_ in groups['sleeper']]); assert abs(sleeper[:,1].max()-(builder.SEAT+.042))<1e-8
+        assert sleeper[:,1].max()-sleeper[:,1].min()>.001
+        assert np.max(np.abs(sleeper[:,0]))<1.1,'Support blocks must remain beneath individual rails'
+        for side in ('left','right'):
+            rail=np.concatenate([p for p,_ in groups['rail_'+side]])
+            head=rail[rail[:,1]>.23]; assert abs(head[:,0].max()-head[:,0].min()-.068)<1e-8
+        report['models'][name]={'faces':len(faces),'vertices':sum(len(p) for _,p,_,_ in faces),'groups':list(groups)}
+    elif name.startswith('direct_'):
+        allp=np.concatenate([p for _,p,_,_ in faces]); assert abs(allp[:,2].min()+.3)<1e-8 and abs(allp[:,2].max()-.3)<1e-8
+        assert 'slab_bed' not in groups and 'direct_bearer' in groups and 'sleeper' not in groups and 'ballast' not in groups
+        supports=np.concatenate([p for p,u in groups['direct_bearer']])
+        assert abs(supports[:,1].min()-builder.TRACK_BED_BOTTOM)<1e-8
+        assert supports[:,1].max()>=builder.TRACK_BED_TOP-.001
+        left=supports[supports[:,0]<-.2]; right=supports[supports[:,0]>.2]
+        assert left.size and right.size and left[:,0].max()<right[:,0].min(),'Direct strips must leave a centre gap'
+        for side in ('left','right'):
+            rail=np.concatenate([p for p,_ in groups['rail_'+side]]); head=rail[rail[:,1]>.23]
+            assert abs(head[:,0].max()-head[:,0].min()-.068)<1e-8
+        report['models'][name]={'faces':len(faces),'vertices':sum(len(p) for _,p,_,_ in faces),'groups':list(groups)}
     elif name.startswith(('rail_','outer_guard_','center_guard_')):
         allp=np.concatenate([p for _,p,_,_ in faces]); assert abs(allp[:,2].min()+.3)<1e-8 and abs(allp[:,2].max()-.3)<1e-8
         for side in ('left','right'):
@@ -133,12 +165,19 @@ for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_m
 
 # The guarded descriptor must load the same running-rail detail while retaining
 # the two longitudinal guard groups as fixed geometry.
-for descriptor_name in ('citizons_mainline_1435.json','citizons_outer_guard_1435.json','citizons_center_guard_1435.json'):
+for descriptor_name in ('citizons_mainline_1435.json','citizons_outer_guard_1435.json','citizons_center_guard_1435.json','citizons_slab_1435.json','citizons_direct_1435.json'):
     descriptor=json.loads((PACK/'assets/citizons_railway/rail_profiles'/descriptor_name).read_text(encoding='utf8'))
     assert descriptor['style'] in style and descriptor['model']==style[descriptor['style']]['model']
     if descriptor['style']=='citizons_mainline_1435': assert descriptor['modelGroups']['rail']==['rail_right']
+    elif descriptor['style']=='citizons_slab_1435':
+        assert descriptor['trackBed']=='slab' and descriptor['ballast'] is False and descriptor['flatSleeper'] is True
+        assert descriptor['modelGroups']['preserve']==['slab_bed']
+    elif descriptor['style']=='citizons_direct_1435':
+        assert descriptor['trackBed']=='direct' and descriptor['ballast'] is False and descriptor['sleeperStyle']=='none'
+        assert descriptor['modelGroups']['sleeper']==['direct_bearer'] and descriptor['modelGroups']['preserve']==['direct_bearer']
+        assert 'direct_bearer' not in descriptor['modelGroups']['supports'] and descriptor['continuousSupports']
     else: assert descriptor['modelGroups']['rail']==['rail_right'] and descriptor['modelGroups']['fastener']==['fastener_right']
-    if descriptor['style'] != 'citizons_mainline_1435':
+    if descriptor['style'] not in ('citizons_mainline_1435','citizons_slab_1435','citizons_direct_1435'):
         guard=descriptor['continuousGuard']
         prefix='outer' if 'outer' in descriptor['style'] else 'center'
         if prefix=='center': assert abs(guard['supportInset']-(builder.CENTER_GUARD_CENTER-.070))<1e-8
@@ -149,14 +188,14 @@ for descriptor_name in ('citizons_mainline_1435.json','citizons_outer_guard_1435
         assert set(descriptor['modelGroups'])=={'rail','sleeper','fastener','preserve','supports'}
         assert all(prefix+'_fastener_'+side in descriptor['modelGroups']['supports'] for side in ('left','right'))
     for level in ('near','mid','far'):
-        assert Path(descriptor['lod'][level]['model'].split(':',1)[1]).name in {p.name for p in MODEL.glob('outer_guard_*.obj')} | {p.name for p in MODEL.glob('center_guard_*.obj')} | {p.name for p in MODEL.glob('rail_*.obj')}
+        assert Path(descriptor['lod'][level]['model'].split(':',1)[1]).name in {p.name for p in MODEL.glob('outer_guard_*.obj')} | {p.name for p in MODEL.glob('center_guard_*.obj')} | {p.name for p in MODEL.glob('rail_*.obj')} | {p.name for p in MODEL.glob('slab_*.obj')} | {p.name for p in MODEL.glob('direct_*.obj')}
 
 # Rebuild once more and compare bytes. Output textures must not get brighter on each run.
 paths=[p for p in MODEL.iterdir() if p.suffix in ('.obj','.mtl','.png')]
 before={p:p.read_bytes() for p in paths}; builder.main()
 assert all(p.read_bytes()==data for p,data in before.items()),'Non-idempotent rebuild'
 report.update(gauge=1.435,railTop=.26428,repeatInterval=.6,sleeperCenterDepression=.035111,
-              ballastPlateauMin=.026,ballastBottom=builder.BALLAST_BOTTOM,ballastMaximumThickness=.35,ballastToeWidth=2*builder.BALLAST_TOE,uvConvention='OBJ bottom-left / MTR flipV true',idempotent=True,
+              trackBedTop=builder.TRACK_BED_TOP,trackBedBottom=builder.TRACK_BED_BOTTOM,slabBedBottom=builder.SLAB_BED_BOTTOM,ballastPlateauMin=.026,ballastBottom=builder.BALLAST_BOTTOM,ballastMaximumThickness=.35,ballastToeWidth=2*builder.BALLAST_TOE,uvConvention='OBJ bottom-left / MTR flipV true',idempotent=True,
               automaticLodSupported=True,lodDistances=[4,12])
 out=Path(__file__).resolve().parent/'output'; out.mkdir(exist_ok=True)
 (out/'validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
