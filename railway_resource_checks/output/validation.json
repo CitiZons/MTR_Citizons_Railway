@@ -2,8 +2,8 @@
   "scope": "Exported resource geometry and deterministic rebuild; runtime validation is reported separately",
   "models": {
     "rail_high": {
-      "faces": 4600,
-      "vertices": 14452,
+      "faces": 2216,
+      "vertices": 7180,
       "groups": [
         "ballast",
         "sleeper",
@@ -16,8 +16,8 @@
       ]
     },
     "rail_mid": {
-      "faces": 1176,
-      "vertices": 4036,
+      "faces": 1056,
+      "vertices": 3644,
       "groups": [
         "ballast",
         "sleeper",
@@ -30,8 +30,8 @@
       ]
     },
     "rail_low": {
-      "faces": 756,
-      "vertices": 2596,
+      "faces": 502,
+      "vertices": 1780,
       "groups": [
         "ballast",
         "sleeper",
@@ -44,8 +44,8 @@
       ]
     },
     "outer_guard_high": {
-      "faces": 2892,
-      "vertices": 9320,
+      "faces": 1691,
+      "vertices": 5648,
       "groups": [
         "ballast",
         "sleeper",
@@ -62,8 +62,8 @@
       ]
     },
     "outer_guard_mid": {
-      "faces": 980,
-      "vertices": 3440,
+      "faces": 911,
+      "vertices": 3208,
       "groups": [
         "ballast",
         "sleeper",
@@ -80,8 +80,8 @@
       ]
     },
     "outer_guard_low": {
-      "faces": 704,
-      "vertices": 2488,
+      "faces": 564,
+      "vertices": 2028,
       "groups": [
         "ballast",
         "sleeper",
@@ -98,8 +98,8 @@
       ]
     },
     "center_guard_high": {
-      "faces": 5028,
-      "vertices": 15980,
+      "faces": 2632,
+      "vertices": 8672,
       "groups": [
         "ballast",
         "sleeper",
@@ -116,8 +116,8 @@
       ]
     },
     "center_guard_mid": {
-      "faces": 1420,
-      "vertices": 4940,
+      "faces": 1288,
+      "vertices": 4512,
       "groups": [
         "ballast",
         "sleeper",
@@ -134,8 +134,8 @@
       ]
     },
     "center_guard_low": {
-      "faces": 960,
-      "vertices": 3340,
+      "faces": 694,
+      "vertices": 2488,
       "groups": [
         "ballast",
         "sleeper",
@@ -152,8 +152,8 @@
       ]
     },
     "slab_high": {
-      "faces": 4190,
-      "vertices": 13080,
+      "faces": 1806,
+      "vertices": 5808,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -166,8 +166,8 @@
       ]
     },
     "slab_mid": {
-      "faces": 934,
-      "vertices": 3192,
+      "faces": 814,
+      "vertices": 2800,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -180,8 +180,8 @@
       ]
     },
     "slab_low": {
-      "faces": 590,
-      "vertices": 2024,
+      "faces": 336,
+      "vertices": 1208,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -194,8 +194,8 @@
       ]
     },
     "direct_high": {
-      "faces": 4104,
-      "vertices": 12768,
+      "faces": 1720,
+      "vertices": 5496,
       "groups": [
         "direct_bearer",
         "fastener_left",
@@ -207,8 +207,8 @@
       ]
     },
     "direct_mid": {
-      "faces": 848,
-      "vertices": 2880,
+      "faces": 728,
+      "vertices": 2488,
       "groups": [
         "direct_bearer",
         "fastener_left",
@@ -220,8 +220,8 @@
       ]
     },
     "direct_low": {
-      "faces": 504,
-      "vertices": 1712,
+      "faces": 250,
+      "vertices": 896,
       "groups": [
         "direct_bearer",
         "fastener_left",

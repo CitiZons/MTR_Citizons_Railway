@@ -1,0 +1,37 @@
+{
+  "citizons_mainline_1435": {
+    "name": "Citizons 高仿真钢轨 有砟 1435mm",
+    "model": "citizons_railway:models/rail/rail_high.obj",
+    "repeatInterval": 0.6,
+    "yOffset": 0.0,
+    "flipV": true
+  },
+  "citizons_outer_guard_1435": {
+    "name": "Citizons 高仿真钢轨(外护轨) 有砟 1435mm",
+    "model": "citizons_railway:models/rail/outer_guard_high.obj",
+    "repeatInterval": 0.6,
+    "yOffset": 0.0,
+    "flipV": true
+  },
+  "citizons_center_guard_1435": {
+    "name": "Citizons 高仿真钢轨(中央护轨) 有砟 1435mm",
+    "model": "citizons_railway:models/rail/center_guard_high.obj",
+    "repeatInterval": 0.6,
+    "yOffset": 0.0,
+    "flipV": true
+  },
+  "citizons_slab_1435": {
+    "name": "Citizons 高仿真钢轨 无砟 有枕 1435mm",
+    "model": "citizons_railway:models/rail/slab_high.obj",
+    "repeatInterval": 0.6,
+    "yOffset": 0.0,
+    "flipV": true
+  },
+  "citizons_direct_1435": {
+    "name": "Citizons 高仿真钢轨 无砟 无枕 1435mm",
+    "model": "citizons_railway:models/rail/direct_high.obj",
+    "repeatInterval": 0.6,
+    "yOffset": 0.0,
+    "flipV": true
+  }
+}

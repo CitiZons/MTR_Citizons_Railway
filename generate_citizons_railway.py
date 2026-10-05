@@ -121,23 +121,56 @@ class Obj:
             ps=[points[i] for i in piece]; ts=[self.uv(region,*uv[i]) for i in piece]
             n=unit(cross(sub(ps[1],ps[0]),sub(ps[2],ps[0])))
             self.faces.append((self.group,region,ps,ts,n))
+    def deduplicate_faces(self):
+        """Drop exact repeated polygons while preserving groups, UVs and smoothing."""
+        seen=set(); faces=[]; smooth=set()
+        for index,face in enumerate(self.faces):
+            group,region,points,uv,normal=face
+            key=(group,region,tuple(sorted(
+                (tuple(round(value,6) for value in point),
+                 tuple(round(value,8) for value in texcoord))
+                for point,texcoord in zip(points,uv))))
+            if key in seen:
+                continue
+            seen.add(key); new_index=len(faces); faces.append(face)
+            if index in self.smooth: smooth.add(new_index)
+        self.faces=faces; self.smooth=smooth
     def save(self,path):
+        self.deduplicate_faces()
         lines=['# metres; Y up; CCW outward; repeat 0.6 m',f'mtllib {path.stem}.mtl']
-        for _,_,ps,_,_ in self.faces: lines += ['v %.6f %.6f %.6f'%p for p in ps]
-        for _,_,_,ts,_ in self.faces: lines += ['vt %.8f %.8f'%uv for uv in ts]
         accumulated={}
         for i,(_,_,ps,_,n) in enumerate(self.faces):
             if i in self.smooth:
                 for p in ps:
                     key=tuple(round(v,6) for v in p);accumulated[key]=tuple(a+b for a,b in zip(accumulated.get(key,(0,0,0)),n))
-        for i,(_,_,ps,_,n) in enumerate(self.faces):
-            for p in ps:
-                normal=unit(accumulated[tuple(round(v,6) for v in p)]) if i in self.smooth else n
-                lines.append('vn %.8f %.8f %.8f'%normal)
-        offset=1; group=None
-        for index,(g,_,ps,_,_) in enumerate(self.faces,1):
+        # Use standard indexed OBJ triples. The previous writer emitted a new
+        # position/UV/normal record for every face corner; sharing identical
+        # triples cuts parser memory and upload work without changing geometry.
+        positions=[]; texcoords=[]; normals=[]
+        position_ids={}; texcoord_ids={}; normal_ids={}
+        indexed_faces=[]
+        def intern(values,table,items):
+            if values not in table:
+                table[values]=len(items)+1; items.append(values)
+            return table[values]
+        for i,(_,_,ps,ts,n) in enumerate(self.faces):
+            indices=[]
+            for p,texcoord in zip(ps,ts):
+                pkey=tuple(round(v,6) for v in p)
+                tkey=tuple(round(v,8) for v in texcoord)
+                resolved=unit(accumulated[pkey]) if i in self.smooth else n
+                nkey=tuple(round(v,8) for v in resolved)
+                indices.append((intern(pkey,position_ids,positions),
+                                intern(tkey,texcoord_ids,texcoords),
+                                intern(nkey,normal_ids,normals)))
+            indexed_faces.append(indices)
+        lines += ['v %.6f %.6f %.6f'%p for p in positions]
+        lines += ['vt %.8f %.8f'%uv for uv in texcoords]
+        lines += ['vn %.8f %.8f %.8f'%n for n in normals]
+        group=None
+        for (g,_,_,_,_),indices in zip(self.faces,indexed_faces):
             if g!=group: lines += ['g '+g,'usemtl mat']; group=g
-            lines.append('f '+' '.join(f'{k}/{k}/{k}' for k in range(offset,offset+len(ps)))); offset+=len(ps)
+            lines.append('f '+' '.join(f'{v}/{t}/{n}' for v,t,n in indices))
         path.write_text('\n'.join(lines)+'\n',encoding='ascii')
         path.with_suffix('.mtl').write_text('newmtl mat\nKa 1 1 1\nKd 1 1 1\nKs 0.12 0.12 0.12\nNs 32\nd 1\nillum 2\nmap_Kd rail_atlas.png\n',encoding='ascii')
 
@@ -209,11 +242,15 @@ def add_clip(obj,cx,cz,side):
     path=[]
     for k in range(len(anchors)-1):
         p0,p1,p2,p3=[np.array(anchors[max(0,min(len(anchors)-1,j))]) for j in (k-1,k,k+1,k+2)]
-        for t in (0,.5):
+        # The anchors already provide enough curvature for the nearest visible
+        # LOD; an extra midpoint per span only adds parallel tube rings.
+        for t in (0,):
             v=.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t*t+(-p0+3*p1-3*p2+p3)*t*t*t)
             path.append((cx+side*v[0],v[1],cz+v[2]))
     x,y,z=anchors[-1];path.append((cx+side*x,y,cz+z))
-    rings=[]; count=10; radius=.0085
+    # Six sides remain visually round once smooth normals are applied, while
+    # removing most of the tiny tube-side polygons from the nearest LOD.
+    rings=[]; count=6; radius=.0085
     for k,p in enumerate(path):
         tangent=unit(sub(path[min(len(path)-1,k+1)],path[max(0,k-1)])); u=unit(cross(tangent,(0,1,0))); v=cross(tangent,u)
         rings.append([tuple(p[i]+radius*(u[i]*math.cos(j*math.tau/count)+v[i]*math.sin(j*math.tau/count)) for i in range(3)) for j in range(count)])
@@ -227,18 +264,25 @@ def add_clip(obj,cx,cz,side):
     obj.smooth.update(range(smooth_start,len(obj.faces)))
     for k,other in ((0,1),(-1,-2)): obj.face(rings[k],'fastener',[(.5+.5*math.cos(j*math.tau/count),.5+.5*math.sin(j*math.tau/count)) for j in range(count)],sub(path[k],path[other]))
 
-def plate(obj,cx,cz,hx,hz,y0,y1,chamfer=.006,region='fastener'):
+def plate(obj,cx,cz,hx,hz,y0,y1,chamfer=.006,region='fastener',cap_bottom=True,cap_top=True):
     outline=[(-hx+chamfer,-hz),(hx-chamfer,-hz),(hx,-hz+chamfer),(hx,hz-chamfer),(hx-chamfer,hz),(-hx+chamfer,hz),(-hx,hz-chamfer),(-hx,-hz+chamfer)]
     if chamfer==0: outline=[(-hx,-hz),(hx,-hz),(hx,hz),(-hx,hz)]
     rings=[[(cx+x,y,cz+z) for x,z in outline] for y in (y0,y1)]
-    for k in (0,1): obj.face(rings[k],region,[((x+hx)/(2*hx),(z+hz)/(2*hz)) for x,z in outline],(0,2*k-1,0))
+    if cap_bottom: obj.face(rings[0],region,[((x+hx)/(2*hx),(z+hz)/(2*hz)) for x,z in outline],(0,-1,0))
+    if cap_top: obj.face(rings[1],region,[((x+hx)/(2*hx),(z+hz)/(2*hz)) for x,z in outline],(0,1,0))
     for i in range(len(outline)):
         j=(i+1)%len(outline);ps=[rings[0][i],rings[0][j],rings[1][j],rings[1][i]]
         obj.face(ps,region,[(0,0),(1,0),(1,1),(0,1)],(sum(p[0]-cx for p in ps),0,sum(p[2]-cz for p in ps)))
 
-def pressure_plate(obj,cx,cz,side):
+def pressure_plate(obj,cx,cz,side,simple=False):
     # A full rectangular plate beneath BOTH W-clip loops. Its inner lip overlaps
     # the sloping rail foot; the outer part seats on the side base plate.
+    if simple:
+        # At the far LOD the sloped lip is below a pixel in normal views. Keep
+        # its footprint, but use a thin box instead of the 9-segment side
+        # profile (22 faces per fastener pair).
+        plate(obj,cx,cz,.145,.105,BASE,BASE+.010,0,region='fastener',cap_bottom=False)
+        return
     section=[(.042,.1194),(.070,.108),(.082,SEAT+.010),(.188,SEAT+.010),
              (.188,.1095),(.150,.1095),(.076,.1235),(.068,.1235),(.042,.129)]
     rings=[[(cx+side*x,y,cz+z) for x,y in section] for z in (-.105,.105)]
@@ -251,21 +295,25 @@ def pressure_plate(obj,cx,cz,side):
 
 def add_fastener(obj,cx,cz=0,detail=2,group_prefix='fastener'):
     obj.group=group_prefix+'_right' if cx>0 else group_prefix+'_left' if cx<0 else group_prefix
-    plate(obj,cx,cz,.076,.107,SEAT,BASE-.004,region='rubber')
-    plate(obj,cx,cz,.075,.106,BASE-.004,BASE,region='pad')
+    # The far model keeps the same visible footprint but uses square plates. The
+    # chamfer corners are below the useful screen-space threshold at distance and
+    # cost eight extra side faces per plate.
+    chamfer=0 if detail==0 else .006
+    plate(obj,cx,cz,.076,.107,SEAT,BASE-.004,chamfer=chamfer,region='rubber',cap_top=False)
+    plate(obj,cx,cz,.075,.106,BASE-.004,BASE,chamfer=chamfer,region='pad',cap_bottom=False)
+    if detail==0:
+        pressure_plate(obj,cx,cz,1,simple=True)
     for sign in (-1,1):
         # Separate side plate and outer gauge stop, as in the user's reference.
-        plate(obj,cx+sign*.132,cz,.063,.103,SEAT,SEAT+.010,.003)
-        plate(obj,cx+sign*.191,cz,.008,.107,SEAT+.010,BASE+.027,.002,region='rubber')
-        pressure_plate(obj,cx,cz,sign)
+        plate(obj,cx+sign*.132,cz,.063,.103,SEAT,SEAT+.010,0 if detail==0 else .003)
+        plate(obj,cx+sign*.191,cz,.008,.107,SEAT+.010,BASE+.027,0 if detail==0 else .002,region='rubber')
+        if detail>0: pressure_plate(obj,cx,cz,sign)
         if detail>0:
             bolt=cx+sign*.133
-            prism(obj,bolt,cz,.010,.010,SEAT+.010,.192,sides=10)
-            prism(obj,bolt,cz,.030,.030,.162,.168,sides=12)
+            prism(obj,bolt,cz,.010,.010,SEAT+.010,.192,sides=6 if detail==1 else 10)
+            prism(obj,bolt,cz,.030,.030,.162,.168,sides=8 if detail==1 else 12)
             prism(obj,bolt,cz,.020,.020,.168,.186,sides=6)
             prism(obj,bolt,cz,.018,.018,.186,.189,sides=6)
-            if detail>1:
-                for y in (.190,.194,.198):prism(obj,bolt,cz,.0108,.0108,y,y+.0015,sides=10)
             if detail>1: add_clip(obj,cx,cz,sign)
 
 def add_guard_fastener(obj,cx,running,cz=0,detail=2,group_prefix='guard_fastener'):
@@ -312,8 +360,10 @@ def add_outer_clamp(obj,cx,detail):
 def add_center_fastener(obj,cx,detail):
     """Independent compact bolted seats; do not bridge the wide central gap."""
     obj.group='center_fastener_right' if cx>0 else 'center_fastener_left'
+    # The center-guard base is wider than its upper pad, so its exposed top
+    # perimeter is visible and must remain. Only the pad's underside is hidden.
     plate(obj,cx,0,.132,.105,SEAT,BASE-.004)
-    plate(obj,cx,0,.075,.102,BASE-.004,BASE,region='pad')
+    plate(obj,cx,0,.075,.102,BASE-.004,BASE,region='pad',cap_bottom=False)
     for sign in (-1,1):
         plate(obj,cx+sign*.089,0,.039,.075,BASE+.014,BASE+.025,chamfer=.003)
         if detail>0:

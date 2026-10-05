@@ -35,7 +35,14 @@ for path in MODEL.glob('*.mtl'):
 report={'scope':'Exported resource geometry and deterministic rebuild; runtime validation is reported separately','models':{}}
 for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_mid','outer_guard_low','center_guard_high','center_guard_mid','center_guard_low','slab_high','slab_mid','slab_low','direct_high','direct_mid','direct_low','outer_guard_endpoint','center_guard_endpoint','sleeper','fastener'):
     faces=read(MODEL/f'{name}.obj'); groups=defaultdict(list)
+    unique_faces=set()
     for group,points,uv,normals in faces:
+        face_key=(group,tuple(sorted(
+            (tuple(round(float(value),6) for value in point),
+             tuple(round(float(value),8) for value in texcoord))
+            for point,texcoord in zip(points,uv))))
+        assert face_key not in unique_faces,(name,group,'duplicate face')
+        unique_faces.add(face_key)
         assert 3<=len(points)<=4
         assert np.isfinite(points).all() and np.isfinite(uv).all()
         assert (uv>=0).all() and (uv<=1).all()
