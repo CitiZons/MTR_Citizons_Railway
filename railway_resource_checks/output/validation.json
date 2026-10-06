@@ -16,8 +16,8 @@
       ]
     },
     "rail_mid": {
-      "faces": 1056,
-      "vertices": 3644,
+      "faces": 476,
+      "vertices": 1588,
       "groups": [
         "ballast",
         "sleeper",
@@ -30,8 +30,8 @@
       ]
     },
     "rail_low": {
-      "faces": 502,
-      "vertices": 1780,
+      "faces": 288,
+      "vertices": 974,
       "groups": [
         "ballast",
         "sleeper",
@@ -62,8 +62,8 @@
       ]
     },
     "outer_guard_mid": {
-      "faces": 911,
-      "vertices": 3208,
+      "faces": 476,
+      "vertices": 1646,
       "groups": [
         "ballast",
         "sleeper",
@@ -80,8 +80,8 @@
       ]
     },
     "outer_guard_low": {
-      "faces": 564,
-      "vertices": 2028,
+      "faces": 346,
+      "vertices": 1206,
       "groups": [
         "ballast",
         "sleeper",
@@ -116,8 +116,8 @@
       ]
     },
     "center_guard_mid": {
-      "faces": 1288,
-      "vertices": 4512,
+      "faces": 600,
+      "vertices": 2016,
       "groups": [
         "ballast",
         "sleeper",
@@ -134,8 +134,8 @@
       ]
     },
     "center_guard_low": {
-      "faces": 694,
-      "vertices": 2488,
+      "faces": 396,
+      "vertices": 1354,
       "groups": [
         "ballast",
         "sleeper",
@@ -166,8 +166,8 @@
       ]
     },
     "slab_mid": {
-      "faces": 814,
-      "vertices": 2800,
+      "faces": 395,
+      "vertices": 1312,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -180,8 +180,8 @@
       ]
     },
     "slab_low": {
-      "faces": 336,
-      "vertices": 1208,
+      "faces": 259,
+      "vertices": 900,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -207,8 +207,8 @@
       ]
     },
     "direct_mid": {
-      "faces": 728,
-      "vertices": 2488,
+      "faces": 318,
+      "vertices": 1036,
       "groups": [
         "direct_bearer",
         "fastener_left",
@@ -220,8 +220,8 @@
       ]
     },
     "direct_low": {
-      "faces": 250,
-      "vertices": 896,
+      "faces": 182,
+      "vertices": 624,
       "groups": [
         "direct_bearer",
         "fastener_left",

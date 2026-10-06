@@ -1,4 +1,20 @@
-# 更新记录
+# 更新记录 / Changelog
+
+## 0.1.3 — 2026-10-06
+
+相对 0.1.2：
+
+- 简化五种轨型的中、低精度扣件、轨枕及道床几何，高精度模型保持不变。
+- 有砟普通轨道中／低精度由 1056／502 面降至 476／288 面；两种护轨和无砟样式同样减少面数。
+- 保留钢轨截面、接缝分组、轨距、轨面高度、0.6 m 重复长度及原材质图集。
+- 配套 Point Advanced 0.1.7 的完整区块缓存与支承批处理，更新中英文安装、精度和模型说明。
+
+Changes from 0.1.2:
+
+- Simplify medium- and low-detail fittings, sleepers and beds across all five styles; high-detail models remain unchanged.
+- Reduce ballasted mainline medium/low detail from 1056/502 to 476/288 faces per unit, with corresponding reductions in guard and slab styles.
+- Retain rail sections, joint groups, gauge, rail-top height, the 0.6 m repeat length and the existing texture atlas.
+- Pair with Point Advanced 0.1.7's complete-chunk cache and support batching; update English and Chinese installation, LOD and model documentation.
 
 ## 0.1.2 — 2026-10-05
 

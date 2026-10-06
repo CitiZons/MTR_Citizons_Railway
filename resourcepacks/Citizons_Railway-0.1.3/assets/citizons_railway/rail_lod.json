@@ -1,0 +1,22 @@
+{
+  "style": "citizons_mainline_1435",
+  "selection": "distance",
+  "levels": [
+    {
+      "name": "near",
+      "model": "citizons_railway:models/rail/rail_high.obj",
+      "maxDistance": 4
+    },
+    {
+      "name": "mid",
+      "model": "citizons_railway:models/rail/rail_mid.obj",
+      "maxDistance": 12
+    },
+    {
+      "name": "far",
+      "model": "citizons_railway:models/rail/rail_low.obj",
+      "maxDistance": 128
+    }
+  ],
+  "note": "Point Advanced client: full details within 4 m, simplified fittings within 12 m, low detail beyond; continuous rail sections."
+}

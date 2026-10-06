@@ -135,6 +135,22 @@ class Obj:
             seen.add(key); new_index=len(faces); faces.append(face)
             if index in self.smooth: smooth.add(new_index)
         self.faces=faces; self.smooth=smooth
+    def simplify_lod(self,detail):
+        """Remove faces that are hidden or below the screen-space threshold in mid/far LODs.
+        Rail sections and all *_end groups stay intact because they close cell seams."""
+        if detail>=2:return
+        kept=[]
+        for face in self.faces:
+            group,region,points,uv,normal=face
+            cy=sum(p[1] for p in points)/len(points)
+            if group=='ballast': keep=normal[1]>.5 or cy>(-.1 if detail==1 else .02)
+            elif group=='sleeper': keep=normal[1]>.5 or cy>.04
+            elif group.startswith('fastener') or group.startswith('outer_fastener') or group.startswith('center_fastener'):
+                keep=normal[1]>.5
+            elif group in ('slab_bed','direct_bearer'): keep=normal[1]>-.5
+            else: keep=True
+            if keep: kept.append(face)
+        self.faces=kept
     def save(self,path):
         self.deduplicate_faces()
         lines=['# metres; Y up; CCW outward; repeat 0.6 m',f'mtllib {path.stem}.mtl']
@@ -524,6 +540,7 @@ def make_rail(name,profile,detail,kind='mainline'):
             if kind=='outer': add_guard_fastener(obj,center,(-CENTER if center<0 else CENTER),detail=detail,group_prefix=fitting)
             else: add_center_fastener(obj,center,detail)
             add_rail(obj,center,GUARD_PROFILE,prefix,caps=False,polished_head=kind!='center')
+    obj.simplify_lod(detail)
     obj.save(MODEL_DIR/f'{name}.obj'); return obj
 
 def main():
