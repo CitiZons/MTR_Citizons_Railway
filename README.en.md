@@ -2,12 +2,12 @@
 
 [English](README.en.md) | [简体中文](README.zh-CN.md)
 
-A track resource pack for [MTR](https://github.com/Minecraft-Transit-Railway/Minecraft-Transit-Railway), targeting Minecraft **1.20.1**, Forge **47.4.18** and MTR **4.0.3**. The current pack version is **0.1.3**, paired with [MTR Railway Point Advanced](https://github.com/CitiZons/MTR_Railway_Point_Advanced) **0.1.7**.
+A track resource pack for [MTR](https://github.com/Minecraft-Transit-Railway/Minecraft-Transit-Railway), targeting Minecraft **1.20.1**, Forge **47.4.18** and MTR **4.0.3**. The current pack version is **0.1.4**, paired with [MTR Railway Point Advanced](https://github.com/CitiZons/MTR_Railway_Point_Advanced) **0.1.7+**.
 
 ## Installation
 
-1. Put [Citizons_Railway-0.1.3.zip](dist/Citizons_Railway-0.1.3.zip) in the instance `resourcepacks` folder and enable it. You may also use the folder `resourcepacks/Citizons_Railway-0.1.3`. The compatible file [dist/Citizons_Railway.zip](dist/Citizons_Railway.zip) has the same contents.
-2. Install the same Point Advanced 0.1.7 build on both client and server and remove older JARs.
+1. Put [Citizons_Railway-0.1.4.zip](dist/Citizons_Railway-0.1.4.zip) in the instance `resourcepacks` folder and enable it. You may also use the folder `resourcepacks/Citizons_Railway-0.1.4`. The compatible file [dist/Citizons_Railway.zip](dist/Citizons_Railway.zip) has the same contents.
+2. Install Point Advanced **0.1.7 or later**, using the same build on both client and server. Remove older JARs.
 3. Select one of the track styles listed below in MTR. If a turnout was manually locked to another style, set it back to automatic or to the matching Citizons style in the blueprint.
 
 ## Track styles
@@ -30,15 +30,15 @@ Point Advanced switches between high, medium and low detail at **4 m / 12 m** by
 
 | Style | High | Medium | Low |
 |---|---:|---:|---:|
-| Ballasted mainline | 2216 | 476 | 288 |
-| Ballasted outer guard | 1691 | 476 | 346 |
-| Ballasted central guard | 2632 | 600 | 396 |
-| Slab with sleepers | 1806 | 395 | 259 |
-| Direct support without sleepers | 1720 | 318 | 182 |
+| Ballasted mainline | 1528 | 456 | 250 |
+| Ballasted outer guard | 1232 | 456 | 308 |
+| Ballasted central guard | 1810 | 576 | 354 |
+| Slab with sleepers | 1226 | 395 | 259 |
+| Direct support without sleepers | 1140 | 318 | 182 |
 
 When the resource pack is used alone, MTR uses the high-detail model selected by the style entry.
 
-Medium and low detail reduce fastener side walls and undersides, as well as lower bed and sleeper geometry, while retaining rail sections, joint groups and the texture atlas. High-detail models are unchanged. OBJ files share position, UV and normal indices. Point Advanced 0.1.7 caches ordinary rails and supports in complete 8 m chunks and selects LOD per chunk; rotating the camera does not rebuild unchanged geometry.
+All three ballasted sleeper LODs retain their full 120 mm body, textured sides and rail-seat height; medium and low detail use fewer top-profile segments. Mainline and outer-guard sleepers retain the 35.111 mm central depression, while central-guard sleepers retain flat tops. LOD changes preserve the sleeper height and side material. High-detail fittings and ballast are simplified while rail sections, end caps and the texture atlas are retained. OBJ files share position, UV and normal indices. Point Advanced caches ordinary rails and supports in complete 8 m chunks and selects LOD per chunk; rotating the camera does not rebuild unchanged geometry.
 
 ## Regeneration and packaging
 
@@ -51,7 +51,7 @@ python railway_resource_checks/validate.py
 python package_release.py
 ```
 
-Packaging produces a versioned ZIP, a compatibility ZIP and an install-ready folder at `resourcepacks/Citizons_Railway-0.1.3`. Use `railway_resource_checks/render.py` for model previews.
+Packaging produces a versioned ZIP, a compatibility ZIP and an install-ready folder at `resourcepacks/Citizons_Railway-0.1.4`. Use `railway_resource_checks/render.py` for model previews.
 
 See [MODEL_NOTES.md](resourcepacks/Citizons_Railway/MODEL_NOTES.md) for model dimensions, groups and materials, and [CHANGELOG.md](CHANGELOG.md) for version changes.
 

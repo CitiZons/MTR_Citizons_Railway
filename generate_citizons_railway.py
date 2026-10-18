@@ -139,18 +139,57 @@ class Obj:
         """Remove faces that are hidden or below the screen-space threshold in mid/far LODs.
         Rail sections and all *_end groups stay intact because they close cell seams."""
         if detail>=2:return
-        kept=[]
-        for face in self.faces:
+        kept=[]; smooth=set()
+        for index,face in enumerate(self.faces):
             group,region,points,uv,normal=face
             cy=sum(p[1] for p in points)/len(points)
             if group=='ballast': keep=normal[1]>.5 or cy>(-.1 if detail==1 else .02)
-            elif group=='sleeper': keep=normal[1]>.5 or cy>.04
+            elif group=='sleeper': keep=normal[1]>.5 or cy>.04 or abs(normal[1])<.5
             elif group.startswith('fastener') or group.startswith('outer_fastener') or group.startswith('center_fastener'):
                 keep=normal[1]>.5
             elif group in ('slab_bed','direct_bearer'): keep=normal[1]>-.5
             else: keep=True
-            if keep: kept.append(face)
-        self.faces=kept
+            if keep:
+                if index in self.smooth: smooth.add(len(kept))
+                kept.append(face)
+        self.faces=kept; self.smooth=smooth
+    def compact_hardware(self):
+        """Join pairs of coplanar cap triangles without changing their outline or UVs."""
+        edges={}; replacements={}; removed=set()
+        def key(p,t): return tuple(round(v,8) for v in (*p,*t))
+        for i,(group,region,ps,ts,normal) in enumerate(self.faces):
+            if i in self.smooth or len(ps)!=3 or 'fastener' not in group: continue
+            refs=[key(p,t) for p,t in zip(ps,ts)]
+            for k in range(3):
+                edge=(group,region,refs[k],refs[(k+1)%3])
+                other=edges.get((group,region,edge[3],edge[2]))
+                if other is None or other in removed or other in replacements: continue
+                old=self.faces[other]
+                if sum(a*b for a,b in zip(normal,old[4]))<1-1e-10: continue
+                oldrefs=[key(p,t) for p,t in zip(old[2],old[3])]
+                boundary={}
+                data={r:(p,t) for r,p,t in zip(refs,ps,ts)}
+                data.update({r:(p,t) for r,p,t in zip(oldrefs,old[2],old[3])})
+                for ring in (refs,oldrefs):
+                    for a,b in zip(ring,ring[1:]+ring[:1]):
+                        if (b,a) in boundary: del boundary[(b,a)]
+                        else: boundary[(a,b)]=True
+                if len(boundary)!=4: continue
+                following={a:b for a,b in boundary}; ring=[next(iter(following))]
+                for _ in range(3): ring.append(following.get(ring[-1]))
+                if None in ring or len(set(ring))!=4 or following.get(ring[-1])!=ring[0]: continue
+                points=[data[r][0] for r in ring]
+                if any(sum(a*b for a,b in zip(cross(sub(points[(n+1)%4],points[n]),sub(points[(n+2)%4],points[(n+1)%4])),normal))<=1e-12 for n in range(4)): continue
+                replacements[other]=(group,region,points,[data[r][1] for r in ring],old[4]); removed.add(i)
+                break
+            if i not in removed:
+                for a,b in zip(refs,refs[1:]+refs[:1]): edges[(group,region,a,b)]=i
+        kept=[]; smooth=set()
+        for index,face in enumerate(self.faces):
+            if index in removed: continue
+            if index in self.smooth: smooth.add(len(kept))
+            kept.append(replacements.get(index,face))
+        self.faces=kept; self.smooth=smooth
     def save(self,path):
         self.deduplicate_faces()
         lines=['# metres; Y up; CCW outward; repeat 0.6 m',f'mtllib {path.stem}.mtl']
@@ -223,26 +262,34 @@ def sleeper_top(x):
     if a<=.93: return SEAT
     return SEAT-(a-.93)/.32*.012
 
-def add_sleeper(obj,z=0,detail=2,flat=False):
-    obj.group='sleeper'; bottom=SEAT-.12
+def add_sleeper(obj,z=0,detail=2,flat=False,bottom=None,vertical_sides=False):
+    obj.group='sleeper'; uv_bottom=SEAT-.12
+    if bottom is None: bottom=uv_bottom
     xs=[-1.25,-1.22,-1.2,-.93,-.7515,-.6,-.53,-.40,-.27,-.13,0,.13,.27,.40,.53,.6,.7515,.93,1.2,1.22,1.25]
     if detail==0: xs=[-1.25,-1.2,-.93,-.6,-.53,0,.53,.6,.93,1.2,1.25]
     rings=[]
     for x in xs:
         h=SEAT if flat else sleeper_top(x); w=.12 if abs(x)<1.22 else .105
-        rings.append([(x,bottom,z-w),(x,bottom,z+w),(x,h-.008,z+w-.009),(x,h,z+w-.019),(x,h,z-w+.019),(x,h-.008,z-w+.009)])
+        wall=w if vertical_sides else w-.009
+        rings.append([(x,bottom,z-w),(x,bottom,z+w),(x,h-.008,z+wall),(x,h,z+w-.019),(x,h,z-w+.019),(x,h-.008,z-wall)])
     for k in range(len(rings)-1):
         tile=math.floor((xs[k]+xs[k+1])/.6/2)
         for j in range(6):
             n=(j+1)%6; ps=[rings[k][j],rings[k+1][j],rings[k+1][n],rings[k][n]]
             if j in (0,2,3,4): outward=(0,-1 if j==0 else 1,0); uv=[(p[0]/.6-tile,(p[2]-z+.3)/.6) for p in ps]
-            else: outward=(0,0,1 if j==1 else -1); uv=[(p[0]/.6-tile,(p[1]-bottom)/.6) for p in ps]
+            else: outward=(0,0,1 if j==1 else -1); uv=[(p[0]/.6-tile,(p[1]-uv_bottom)/.6) for p in ps]
             obj.face(ps,'concrete',uv,outward)
-    for k in (0,len(rings)-1): obj.face(rings[k],'concrete',[((p[2]-z+.12)/.24,(p[1]-bottom)/.12) for p in rings[k]],(-1 if k==0 else 1,0,0))
+    for k in (0,len(rings)-1): obj.face(rings[k],'concrete',[((p[2]-z+.12)/.24,(p[1]-uv_bottom)/.12) for p in rings[k]],(-1 if k==0 else 1,0,0))
 
-def prism(obj,cx,cz,hx,hz,y0,y1,region='fastener',sides=8):
+def add_lod_sleeper(obj,z=0,detail=2,flat=False):
+    # All LODs keep the full 120 mm body. Only the top-profile sampling changes.
+    source=Obj('sleeper'); selected=max(0,detail-1)
+    add_sleeper(source,z,selected,flat,vertical_sides=True); source.simplify_lod(selected)
+    obj.faces.extend(source.faces)
+
+def prism(obj,cx,cz,hx,hz,y0,y1,region='fastener',sides=8,cap_bottom=True):
     rings=[[(cx+hx*math.cos(math.tau*k/sides),y,cz+hz*math.sin(math.tau*k/sides)) for k in range(sides)] for y in (y0,y1)]
-    for k in (0,1): obj.face(rings[k],region,[((p[0]-cx+hx)/(2*hx),(p[2]-cz+hz)/(2*hz)) for p in rings[k]],(0,k*2-1,0))
+    for k in ((0,1) if cap_bottom else (1,)): obj.face(rings[k],region,[((p[0]-cx+hx)/(2*hx),(p[2]-cz+hz)/(2*hz)) for p in rings[k]],(0,k*2-1,0))
     for i in range(sides):
         j=(i+1)%sides; ps=[rings[0][i],rings[0][j],rings[1][j],rings[1][i]]
         obj.face(ps,region,[(i/sides,0),((i+1)/sides,0),((i+1)/sides,1),(i/sides,1)],(sum(p[0]-cx for p in ps),0,sum(p[2]-cz for p in ps)))
@@ -264,9 +311,8 @@ def add_clip(obj,cx,cz,side):
             v=.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t*t+(-p0+3*p1-3*p2+p3)*t*t*t)
             path.append((cx+side*v[0],v[1],cz+v[2]))
     x,y,z=anchors[-1];path.append((cx+side*x,y,cz+z))
-    # Six sides remain visually round once smooth normals are applied, while
-    # removing most of the tiny tube-side polygons from the nearest LOD.
-    rings=[]; count=6; radius=.0085
+    # Smooth four-sided tubes retain the W outline without tiny tube-side facets.
+    rings=[]; count=4; radius=.0085
     for k,p in enumerate(path):
         tangent=unit(sub(path[min(len(path)-1,k+1)],path[max(0,k-1)])); u=unit(cross(tangent,(0,1,0))); v=cross(tangent,u)
         rings.append([tuple(p[i]+radius*(u[i]*math.cos(j*math.tau/count)+v[i]*math.sin(j*math.tau/count)) for i in range(3)) for j in range(count)])
@@ -326,10 +372,10 @@ def add_fastener(obj,cx,cz=0,detail=2,group_prefix='fastener'):
         if detail>0: pressure_plate(obj,cx,cz,sign)
         if detail>0:
             bolt=cx+sign*.133
-            prism(obj,bolt,cz,.010,.010,SEAT+.010,.192,sides=6 if detail==1 else 10)
-            prism(obj,bolt,cz,.030,.030,.162,.168,sides=8 if detail==1 else 12)
-            prism(obj,bolt,cz,.020,.020,.168,.186,sides=6)
-            prism(obj,bolt,cz,.018,.018,.186,.189,sides=6)
+            prism(obj,bolt,cz,.010,.010,SEAT+.010,.192,sides=6,cap_bottom=detail<2)
+            prism(obj,bolt,cz,.030,.030,.162,.168,sides=8)
+            prism(obj,bolt,cz,.020,.020,.168,.186,sides=6,cap_bottom=detail<2)
+            prism(obj,bolt,cz,.018,.018,.186,.189,sides=6,cap_bottom=detail<2)
             if detail>1: add_clip(obj,cx,cz,sign)
 
 def add_guard_fastener(obj,cx,running,cz=0,detail=2,group_prefix='guard_fastener'):
@@ -348,9 +394,9 @@ def add_guard_fastener(obj,cx,running,cz=0,detail=2,group_prefix='guard_fastener
             j=(i+1)%4; nx,ny=section[j]
             obj.face([rings[0][i],rings[0][j],rings[1][j],rings[1][i]],'fastener',[(0,0),(1,0),(1,1),(0,1)],(direction*(ny-y),x-nx,0))
     bolt=cx+direction*.155
-    if detail==2: prism(obj,bolt,cz,.025,.025,BASE,BASE+.006,sides=10)
-    if detail>0: prism(obj,bolt,cz,.017,.017,BASE+.006,BASE+.027,sides=6)
-    if detail==2: prism(obj,bolt,cz,.008,.008,BASE+.027,BASE+.034,sides=8)
+    if detail==2: prism(obj,bolt,cz,.025,.025,BASE,BASE+.006,sides=8,cap_bottom=False)
+    if detail>0: prism(obj,bolt,cz,.017,.017,BASE+.006,BASE+.027,sides=6,cap_bottom=detail<2)
+    if detail==2: prism(obj,bolt,cz,.008,.008,BASE+.027,BASE+.034,sides=6,cap_bottom=False)
 
 
 def add_outer_clamp(obj,cx,detail):
@@ -383,10 +429,10 @@ def add_center_fastener(obj,cx,detail):
     for sign in (-1,1):
         plate(obj,cx+sign*.089,0,.039,.075,BASE+.014,BASE+.025,chamfer=.003)
         if detail>0:
-            prism(obj,cx+sign*.106,0,.017,.017,BASE+.025,BASE+.045,sides=6)
+            prism(obj,cx+sign*.106,0,.017,.017,BASE+.025,BASE+.045,sides=6,cap_bottom=detail<2)
         if detail>1:
-            prism(obj,cx+sign*.106,0,.024,.024,BASE+.019,BASE+.025,sides=10)
-            prism(obj,cx+sign*.106,0,.008,.008,BASE+.045,BASE+.052,sides=8)
+            prism(obj,cx+sign*.106,0,.024,.024,BASE+.019,BASE+.025,sides=8)
+            prism(obj,cx+sign*.106,0,.008,.008,BASE+.045,BASE+.052,sides=6,cap_bottom=False)
 
 def ballast_height(x,z):
     a=abs(x); center=.026+.008*(.5+.5*math.cos(math.tau*z/.6))
@@ -406,9 +452,10 @@ def clip_height(points,height,above):
 
 def add_ballast(obj,detail=2):
     obj.group='ballast'
-    positive={0,.6,1.2,1.8,*[round(BALLAST_SHOULDER+(BALLAST_TOE-BALLAST_SHOULDER)*i/8,6) for i in range(9)]}
+    # All LODs share the same end section; only the interior longitudinal ripple varies.
+    positive={0,.6,1.2,1.8,*[round(BALLAST_SHOULDER+(BALLAST_TOE-BALLAST_SHOULDER)*i/6,6) for i in range(7)]}
     xs=sorted(positive|{-x for x in positive})
-    zs=[-.30,-.20,-.10,0,.10,.20,.30] if detail>1 else [-.30,0,.30]; bottom=BALLAST_BOTTOM
+    zs=[-.30,-.20,-.10,0,.10,.20,.30] if detail>1 else [-.30,0,.30] if detail==1 else [-.30,.30]; bottom=BALLAST_BOTTOM
     for a,b in zip(xs,xs[1:]):
         tile=math.floor(((a+b)/2)/.6)
         for c,d in zip(zs,zs[1:]):
@@ -527,7 +574,7 @@ def make_rail(name,profile,detail,kind='mainline'):
     elif kind!='direct': add_ballast(obj,detail)
     if kind=='slab': add_block_supports(obj,detail)
     elif kind=='direct': add_direct_bearers(obj,detail)
-    else: add_sleeper(obj,detail=detail,flat=kind=='center')
+    else: add_lod_sleeper(obj,detail=detail,flat=kind=='center')
     for center in (-CENTER,CENTER):
         if kind=='outer': add_outer_clamp(obj,center,detail)
         else: add_fastener(obj,center,detail=detail)
@@ -541,6 +588,7 @@ def make_rail(name,profile,detail,kind='mainline'):
             else: add_center_fastener(obj,center,detail)
             add_rail(obj,center,GUARD_PROFILE,prefix,caps=False,polished_head=kind!='center')
     obj.simplify_lod(detail)
+    if detail==2: obj.compact_hardware()
     obj.save(MODEL_DIR/f'{name}.obj'); return obj
 
 def main():
@@ -553,8 +601,8 @@ def main():
             ('slab_high',HIGH_PROFILE,2,'slab'),('slab_mid',HIGH_PROFILE,1,'slab'),('slab_low',HIGH_PROFILE,0,'slab'),
             ('direct_high',HIGH_PROFILE,2,'direct'),('direct_mid',HIGH_PROFILE,1,'direct'),('direct_low',HIGH_PROFILE,0,'direct')):
         model=make_rail(name,profile,detail,kind); print(name,len(model.faces),'faces')
-    sleeper=Obj('sleeper'); add_sleeper(sleeper); sleeper.save(MODEL_DIR/'sleeper.obj')
-    fitting=Obj('fastener'); add_fastener(fitting,0); fitting.save(MODEL_DIR/'fastener.obj')
+    sleeper=Obj('sleeper'); add_lod_sleeper(sleeper); sleeper.save(MODEL_DIR/'sleeper.obj')
+    fitting=Obj('fastener'); add_fastener(fitting,0); fitting.compact_hardware(); fitting.save(MODEL_DIR/'fastener.obj')
     for kind in ('outer','center'): make_guard_endpoint(kind)
     style=ROOT/'assets/mtrsteamloco/rails/citizons_railway.json'; data=json.loads(style.read_text(encoding='utf-8-sig'))
     data.pop('citizons_guarded_1435',None)

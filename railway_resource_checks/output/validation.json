@@ -2,8 +2,8 @@
   "scope": "Exported resource geometry and deterministic rebuild; runtime validation is reported separately",
   "models": {
     "rail_high": {
-      "faces": 2216,
-      "vertices": 7180,
+      "faces": 1528,
+      "vertices": 5212,
       "groups": [
         "ballast",
         "sleeper",
@@ -16,8 +16,8 @@
       ]
     },
     "rail_mid": {
-      "faces": 476,
-      "vertices": 1588,
+      "faces": 456,
+      "vertices": 1518,
       "groups": [
         "ballast",
         "sleeper",
@@ -30,8 +30,8 @@
       ]
     },
     "rail_low": {
-      "faces": 288,
-      "vertices": 974,
+      "faces": 250,
+      "vertices": 888,
       "groups": [
         "ballast",
         "sleeper",
@@ -44,8 +44,8 @@
       ]
     },
     "outer_guard_high": {
-      "faces": 1691,
-      "vertices": 5648,
+      "faces": 1232,
+      "vertices": 4318,
       "groups": [
         "ballast",
         "sleeper",
@@ -62,8 +62,8 @@
       ]
     },
     "outer_guard_mid": {
-      "faces": 476,
-      "vertices": 1646,
+      "faces": 456,
+      "vertices": 1576,
       "groups": [
         "ballast",
         "sleeper",
@@ -80,8 +80,8 @@
       ]
     },
     "outer_guard_low": {
-      "faces": 346,
-      "vertices": 1206,
+      "faces": 308,
+      "vertices": 1120,
       "groups": [
         "ballast",
         "sleeper",
@@ -98,8 +98,8 @@
       ]
     },
     "center_guard_high": {
-      "faces": 2632,
-      "vertices": 8672,
+      "faces": 1810,
+      "vertices": 6340,
       "groups": [
         "ballast",
         "sleeper",
@@ -116,8 +116,8 @@
       ]
     },
     "center_guard_mid": {
-      "faces": 600,
-      "vertices": 2016,
+      "faces": 576,
+      "vertices": 1934,
       "groups": [
         "ballast",
         "sleeper",
@@ -134,8 +134,8 @@
       ]
     },
     "center_guard_low": {
-      "faces": 396,
-      "vertices": 1354,
+      "faces": 354,
+      "vertices": 1256,
       "groups": [
         "ballast",
         "sleeper",
@@ -152,8 +152,8 @@
       ]
     },
     "slab_high": {
-      "faces": 1806,
-      "vertices": 5808,
+      "faces": 1226,
+      "vertices": 4168,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -194,8 +194,8 @@
       ]
     },
     "direct_high": {
-      "faces": 1720,
-      "vertices": 5496,
+      "faces": 1140,
+      "vertices": 3856,
       "groups": [
         "direct_bearer",
         "fastener_left",

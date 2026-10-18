@@ -1,5 +1,20 @@
 # 更新记录 / Changelog
 
+## 0.1.4 — 2026-10-18
+
+- 支持 Point Advanced 0.1.7 及更新版本；客户端与服务器需使用同一构建。
+- Support Point Advanced 0.1.7 and later; use the same build on client and server.
+
+- 有砟枕木三档恢复完整 120 mm 高度、中央下凹和侧面混凝土贴图，中低精度保留较少的上表面分段。
+- 精简高精度扣件的圆柱细分与共面三角面，保留 W 形弹条、螺母、压板和底板轮廓。
+- 适度精简高精度道砟坡肩，中低精度减少坡肩和纵向起伏细分；各档共享端部截面。
+- 有砟普通轨道高／中／低精度为 1528／456／250 面；钢轨截面和端盖保持不变。
+
+- Restore the full 120 mm body, central depression and textured sides of ballasted sleepers at every LOD, with fewer top-profile segments at medium and low detail.
+- Reduce high-detail fitting cylinder subdivisions and merge coplanar cap triangles while retaining W clips, nuts, pressure plates and bases.
+- Reduce ballast shoulder subdivisions, with lighter simplification at high detail and fewer longitudinal ripple segments at lower LODs; retain shared endpoint sections.
+- Ballasted mainline high/medium/low detail uses 1528/456/250 faces per unit; rail sections and end caps are unchanged.
+
 ## 0.1.3 — 2026-10-06
 
 相对 0.1.2：

@@ -171,16 +171,22 @@ for name in ('rail_high','rail_mid','rail_low','outer_guard_high','outer_guard_m
                 image_uv=uv.copy(); image_uv[:,1]=1-image_uv[:,1]
                 pixels=image_uv*np.array([800,536]); assert (pixels[:,0]>=536).all() and (pixels[:,1]>=272).all()
         sleeper=np.concatenate([p for p,_ in groups['sleeper']]); center_top=sleeper[np.abs(sleeper[:,0])<1e-8,1].max()
+        assert abs(sleeper[:,1].min()-(builder.SEAT-.12))<1e-8,(name,'sleeper body flattened')
+        assert abs(np.ptp(sleeper[:,1])-.12)<1e-8,(name,'full 120 mm sleeper height lost')
+        # Top-only LOD exports used to erase the entire textured side wall.
+        for sign in (-1,1):
+            walls=[(p,uv) for p,uv in groups['sleeper'] if np.ptp(p[:,2])<1e-8
+                   and sign*p[:,2].mean()>.09 and np.ptp(p[:,1])>.01]
+            assert walls,(name,'visible sleeper side missing',sign)
+            assert all(np.ptp(uv[:,1])>.001 for _,uv in walls),(name,'sleeper side UV collapsed')
         if name.startswith('center_guard_'):
             assert abs(center_top-builder.SEAT)<1e-8 and sleeper[:,1].max()-center_top<1e-8
         elif name.endswith('_high'):
             assert abs(center_top-(builder.SEAT-.035111))<1e-8 and sleeper[:,1].max()-center_top>.03
         else:
-            # The low-detail sleeper is a shallow top plate; its outline and
-            # seat height remain unchanged while the buried side walls vanish.
+            # Reduced LODs retain the full-height body and both textured sides.
             assert abs(center_top-(builder.SEAT-.035111))<1e-8
-            # Horizontal top facets can still span the complete sleeper
-            # profile; only their side-wall and underside faces are removed.
+            # Keep the original depression and rail-seat height.
             assert sleeper[:,1].max()-center_top<=.04+1e-8
         ballast=np.concatenate([p for p,_ in groups['ballast']])
         if name.endswith('_high'):
@@ -219,6 +225,19 @@ for descriptor_name in ('citizons_mainline_1435.json','citizons_outer_guard_1435
         assert all(prefix+'_fastener_'+side in descriptor['modelGroups']['supports'] for side in ('left','right'))
     for level in ('near','mid','far'):
         assert Path(descriptor['lod'][level]['model'].split(':',1)[1]).name in {p.name for p in MODEL.glob('outer_guard_*.obj')} | {p.name for p in MODEL.glob('center_guard_*.obj')} | {p.name for p in MODEL.glob('rail_*.obj')} | {p.name for p in MODEL.glob('slab_*.obj')} | {p.name for p in MODEL.glob('direct_*.obj')}
+
+# Compacting hardware caps must preserve their surface area, vertices and UVs.
+hardware=builder.Obj('hardware'); builder.add_fastener(hardware,builder.CENTER,detail=2)
+original=list(hardware.faces)
+def face_area(face):
+    points=np.array(face[2])
+    return sum(np.linalg.norm(np.cross(points[i]-points[0],points[i+1]-points[0]))/2 for i in range(1,len(points)-1))
+original_area=sum(map(face_area,original))
+original_corners={(tuple(p),tuple(uv)) for _,_,points,tex,_ in original for p,uv in zip(points,tex)}
+hardware.compact_hardware()
+assert len(hardware.faces)<len(original),'Hardware cap merge did not reduce face count'
+assert abs(sum(map(face_area,hardware.faces))-original_area)<1e-10,'Hardware cap surface changed'
+assert all((tuple(p),tuple(uv)) in original_corners for _,_,points,tex,_ in hardware.faces for p,uv in zip(points,tex)),'Hardware cap UV changed'
 
 # Rebuild once more and compare bytes. Output textures must not get brighter on each run.
 paths=[p for p in MODEL.iterdir() if p.suffix in ('.obj','.mtl','.png')]
