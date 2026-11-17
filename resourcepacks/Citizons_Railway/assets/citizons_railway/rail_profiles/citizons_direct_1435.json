@@ -58,5 +58,6 @@
     "three_way",
     "scissors"
   ],
+  "textureId": "citizons_railway:rail/rail_atlas.png",
   "continuousSupports": true
 }

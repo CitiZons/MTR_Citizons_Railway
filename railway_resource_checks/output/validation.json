@@ -16,8 +16,8 @@
       ]
     },
     "rail_mid": {
-      "faces": 456,
-      "vertices": 1518,
+      "faces": 376,
+      "vertices": 1330,
       "groups": [
         "ballast",
         "sleeper",
@@ -30,8 +30,8 @@
       ]
     },
     "rail_low": {
-      "faces": 250,
-      "vertices": 888,
+      "faces": 240,
+      "vertices": 848,
       "groups": [
         "ballast",
         "sleeper",
@@ -62,8 +62,8 @@
       ]
     },
     "outer_guard_mid": {
-      "faces": 456,
-      "vertices": 1576,
+      "faces": 446,
+      "vertices": 1602,
       "groups": [
         "ballast",
         "sleeper",
@@ -80,8 +80,8 @@
       ]
     },
     "outer_guard_low": {
-      "faces": 308,
-      "vertices": 1120,
+      "faces": 298,
+      "vertices": 1080,
       "groups": [
         "ballast",
         "sleeper",
@@ -116,8 +116,8 @@
       ]
     },
     "center_guard_mid": {
-      "faces": 576,
-      "vertices": 1934,
+      "faces": 530,
+      "vertices": 1918,
       "groups": [
         "ballast",
         "sleeper",
@@ -134,8 +134,8 @@
       ]
     },
     "center_guard_low": {
-      "faces": 354,
-      "vertices": 1256,
+      "faces": 298,
+      "vertices": 1080,
       "groups": [
         "ballast",
         "sleeper",
@@ -152,8 +152,8 @@
       ]
     },
     "slab_high": {
-      "faces": 1226,
-      "vertices": 4168,
+      "faces": 1210,
+      "vertices": 4104,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -166,8 +166,8 @@
       ]
     },
     "slab_mid": {
-      "faces": 395,
-      "vertices": 1312,
+      "faces": 285,
+      "vertices": 1012,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -180,8 +180,8 @@
       ]
     },
     "slab_low": {
-      "faces": 259,
-      "vertices": 900,
+      "faces": 213,
+      "vertices": 724,
       "groups": [
         "slab_bed",
         "sleeper",
@@ -207,8 +207,8 @@
       ]
     },
     "direct_mid": {
-      "faces": 318,
-      "vertices": 1036,
+      "faces": 238,
+      "vertices": 848,
       "groups": [
         "direct_bearer",
         "fastener_left",
@@ -220,8 +220,8 @@
       ]
     },
     "direct_low": {
-      "faces": 182,
-      "vertices": 624,
+      "faces": 172,
+      "vertices": 584,
       "groups": [
         "direct_bearer",
         "fastener_left",
@@ -241,7 +241,7 @@
       ]
     },
     "center_guard_endpoint": {
-      "faces": 816,
+      "faces": 788,
       "length": 1.8,
       "groups": [
         "terminal_left",
@@ -249,6 +249,15 @@
         "terminal_nose"
       ]
     }
+  },
+  "runtimeContract": {
+    "scope": "Point Advanced profile/LOD/support roles, MTL texture resolution and MTR startup textures",
+    "styles": 8,
+    "profiles": 8,
+    "models": 28,
+    "lodParity": true,
+    "guardSupportsOffsetOnly": true,
+    "mtllibPresent": true
   },
   "gauge": 1.435,
   "railTop": 0.26428,

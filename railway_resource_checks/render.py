@@ -29,7 +29,10 @@ def load_obj(path,name):
     layer=mesh.uv_layers.new(name='UVMap')
     for polygon,uvs in zip(mesh.polygons,uvfaces):
         for loop,uv in zip(polygon.loop_indices,uvs): layer.data[loop].uv=uv
-    for polygon in mesh.polygons: polygon.use_smooth=True
+    # Keep cast-concrete planes hard-edged while allowing curved clips and bolts
+    # to retain their intended smooth normals.
+    for polygon, face_normals in zip(mesh.polygons, normalfaces):
+        polygon.use_smooth = len({tuple(round(value, 5) for value in normal) for normal in face_normals}) > 1
     mesh.normals_split_custom_set([n for face in normalfaces for n in face])
     obj=bpy.data.objects.new(name,mesh); bpy.context.collection.objects.link(obj)
     return obj

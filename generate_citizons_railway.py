@@ -5,6 +5,7 @@ Run: python generate_citizons_railway.py. Requires numpy and Pillow.
 """
 import json
 import math
+import shutil
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
@@ -13,7 +14,7 @@ ROOT=Path(__file__).resolve().parent/'resourcepacks/Citizons_Railway'
 MODEL_DIR=ROOT/'assets/citizons_railway/models/rail'
 TEXTURE_DIR=ROOT/'assets/citizons_railway/textures/rail'
 CELL,GUTTER=256,8
-ATLAS_W,ATLAS_H=800,536
+ATLAS_W,ATLAS_H=800,800
 GAUGE,HEAD_WIDTH,CENTER=1.435,.068,.7515
 # Both guard families stay between the running rails. The outer family sits
 # beside the running rail like the turnout check rail; the central family is
@@ -28,36 +29,45 @@ BALLAST_BOTTOM=.046-.35
 TRACK_BED_TOP=SEAT-(.005*.7)
 TRACK_BED_BOTTOM=TRACK_BED_TOP-.35
 SLAB_BED_BOTTOM=TRACK_BED_TOP-.35
-REGIONS={'rail':(0,0),'head':(1,0),'end':(2,0),'concrete':(0,1),'fastener':(1,1),'ballast':(2,1)}
+REGIONS={'rail':(0,0),'head':(1,0),'end':(2,0),'concrete':(0,1),'fastener':(1,1),'ballast':(2,1),'sleeper_concrete':(0,2)}
 REGIONS.update(pad=(1,1),rubber=(1,1))
 REGION_BOUNDS={'fastener':(0,0,.75,1),'pad':(.84,.62,.98,.98),'rubber':(.84,.02,.98,.38)}
 
-def surface(seed,base,grain,cloud):
+def surface(seed,base,grain,cloud,coarse_size=16):
     rng=np.random.default_rng(seed)
-    coarse=Image.fromarray(rng.integers(70,185,(16,16),dtype=np.uint8))
+    coarse=Image.fromarray(rng.integers(70,185,(coarse_size,coarse_size),dtype=np.uint8))
     coarse=np.asarray(coarse.resize((CELL,CELL),Image.Resampling.BICUBIC),dtype=float)
     values=np.asarray(base)[None,None,:]+(coarse[:,:,None]-128)*cloud+rng.normal(0,grain,(CELL,CELL,1))
     return Image.fromarray(np.clip(values,0,255).astype(np.uint8))
 
+def concrete_texture(seed,base):
+    """Seamless cast-concrete albedo with restrained multi-scale variation."""
+    rng=np.random.default_rng(seed); yy,xx=np.mgrid[0:CELL,0:CELL]; u=xx/CELL; v=yy/CELL
+    value=(1.35*np.sin(math.tau*(u*1.7+v*.35)+.4)+.95*np.sin(math.tau*(u*.55-v*2.1)+1.7)+.55*np.sin(math.tau*(u*3.2+v*2.7)+2.2))
+    values=np.asarray(base,dtype=float)[None,None,:]+(value+rng.normal(0,.42,(CELL,CELL)))[:,:,None]
+    return Image.fromarray(np.clip(values,0,255).astype(np.uint8))
+
 def make_ballast():
-    rng=np.random.default_rng(1435); img=surface(14,(65,72,77),5,.10); draw=ImageDraw.Draw(img)
+    rng=np.random.default_rng(1435); img=surface(14,(58,61,60),5,.08); draw=ImageDraw.Draw(img)
     for _ in range(480):
         cx,cy=rng.uniform(0,CELL,2); radius=rng.uniform(5,12); n=int(rng.integers(5,8))
         angles=np.arange(n)*math.tau/n+rng.uniform(-.12,.12,n); radii=radius*rng.uniform(.65,1.15,n)
         points=list(zip(cx+np.cos(angles)*radii,cy+np.sin(angles)*radii))
-        color=np.array((116,128,135))+int(rng.integers(-21,41))
+        color=np.array((101,108,106))+int(rng.integers(-18,34))
+        color=color+np.array((int(rng.integers(-5,10)),int(rng.integers(-3,8)),int(rng.integers(-7,5))))
         for ox in (-CELL,0,CELL):
             for oy in (-CELL,0,CELL):
                 pts=[(x+ox,y+oy) for x,y in points]
                 draw.polygon([(x+1,y+2) for x,y in pts],fill=(49,56,62)); draw.polygon(pts,fill=tuple(color))
-                draw.polygon([pts[0],pts[1],pts[2],(cx+ox,cy+oy)],fill=tuple(np.minimum(255,color+17)))
-                draw.polygon([pts[-2],pts[-1],pts[0],(cx+ox,cy+oy)],fill=tuple(np.maximum(0,color-14)))
+                draw.polygon([pts[0],pts[1],pts[2],(cx+ox,cy+oy)],fill=tuple(np.minimum(255,color+12)))
+                draw.polygon([pts[-2],pts[-1],pts[0],(cx+ox,cy+oy)],fill=tuple(np.maximum(0,color-18)))
     return img
 
 def build_atlas():
     # Generated textures are outputs, never inputs; rebuilding cannot bleach them.
     textures={'rail':surface(1,(102,89,76),3.2,.10),'head':surface(2,(178,186,190),1.6,.08),
-              'end':surface(3,(124,121,113),4,.20),'concrete':surface(4,(172,182,183),4,.09),
+              'end':surface(3,(124,121,113),4,.20),'concrete':concrete_texture(4,(155,164,166)),
+              'sleeper_concrete':concrete_texture(8,(180,187,187)),
               'fastener':surface(5,(54,58,55),2,.12),'ballast':make_ballast()}
     textures['fastener'].paste(surface(6,(155,145,86),1.5,.08).crop((0,0,52,110)),(204,0))
     textures['fastener'].paste(surface(7,(31,35,33),1,.06).crop((0,0,52,110)),(204,146))
@@ -66,16 +76,109 @@ def build_atlas():
         if rng.random()<.24:
             tone=int(rng.integers(159,204)); d.line((0,y,CELL,y),fill=(tone,tone+7,tone+10))
     d=ImageDraw.Draw(textures['concrete'])
-    for _ in range(600):
-        x,y=rng.integers(0,CELL,2); tone=int(rng.integers(127,165)); d.point((int(x),int(y)),fill=(tone,tone+5,tone+5))
-    filenames={'rail':'steel_side.png','head':'steel.png','end':'steel_end.png','concrete':'concrete.png','fastener':'fastener.png','ballast':'ballast.png'}
+    # Tileable baked AO. Periodic broad bands keep the albedo continuous when
+    # each generated face reuses the shared 0..1 concrete UV region.
+    yy,xx=np.mgrid[0:CELL,0:CELL]
+    ao=0.965 + .012*np.sin(math.tau*xx/CELL*1.7) + .009*np.sin(math.tau*yy/CELL*2.1)
+    concrete=np.asarray(textures['concrete'],dtype=np.float32)*ao[:,:,None]
+    textures['concrete']=Image.fromarray(np.clip(concrete,0,255).astype(np.uint8))
+    d=ImageDraw.Draw(textures['concrete'])
+    d=ImageDraw.Draw(textures['concrete'])
+    filenames={'rail':'steel_side.png','head':'steel.png','end':'steel_end.png','concrete':'concrete.png','sleeper_concrete':'sleeper_concrete.png','fastener':'fastener.png','ballast':'ballast.png'}
     atlas=Image.new('RGB',(ATLAS_W,ATLAS_H),(58,60,61))
     for region,tile in textures.items():
         col,row=REGIONS[region]; x,y=GUTTER+col*(CELL+GUTTER),GUTTER+row*(CELL+GUTTER)
         padded=Image.fromarray(np.pad(np.asarray(tile),((GUTTER,GUTTER),(GUTTER,GUTTER),(0,0)),mode='edge'))
         atlas.paste(padded,(x-GUTTER,y-GUTTER))
         for folder in (MODEL_DIR,TEXTURE_DIR): tile.save(folder/filenames[region])
-    atlas.save(MODEL_DIR/'rail_atlas.png')
+    atlas.save(MODEL_DIR/'rail_atlas.png'); atlas.save(TEXTURE_DIR/'rail_atlas.png')
+    legacy_dir=ROOT/'assets/citizons_railway/rail'; legacy_dir.mkdir(parents=True,exist_ok=True); atlas.save(legacy_dir/'rail_atlas.png')
+
+def make_variant_atlas(name,concrete_base,ballast_seed):
+    """Copy the generated atlas and replace only the ballasted-track materials."""
+    atlas=Image.open(MODEL_DIR/'rail_atlas.png').convert('RGB')
+    concrete=concrete_texture(40+ballast_seed,concrete_base)
+    ballast=make_ballast() if ballast_seed==1 else make_new_ballast()
+    for region,tile in (('concrete',concrete),('sleeper_concrete',concrete),('ballast',ballast)):
+        col,row=REGIONS[region]; x=GUTTER+col*(CELL+GUTTER); y=GUTTER+row*(CELL+GUTTER)
+        padded=Image.fromarray(np.pad(np.asarray(tile),((GUTTER,GUTTER),(GUTTER,GUTTER),(0,0)),mode='edge'))
+        atlas.paste(padded,(x-GUTTER,y-GUTTER))
+    path=MODEL_DIR/f'rail_atlas_{name}.png'; atlas.save(path); atlas.save(TEXTURE_DIR/f'rail_atlas_{name}.png'); return path
+
+def make_new_ballast():
+    rng=np.random.default_rng(1436); img=surface(15,(76,82,82),4,.07); draw=ImageDraw.Draw(img)
+    for _ in range(480):
+        cx,cy=rng.uniform(0,CELL,2); radius=rng.uniform(5,12); n=int(rng.integers(5,8))
+        angles=np.arange(n)*math.tau/n+rng.uniform(-.12,.12,n); radii=radius*rng.uniform(.65,1.15,n)
+        points=list(zip(cx+np.cos(angles)*radii,cy+np.sin(angles)*radii)); color=np.array((125,133,136))+int(rng.integers(-14,22))
+        for ox in (-CELL,0,CELL):
+            for oy in (-CELL,0,CELL):
+                pts=[(x+ox,y+oy) for x,y in points]
+                draw.polygon(pts,fill=tuple(color)); draw.polygon([pts[0],pts[1],pts[2],(cx+ox,cy+oy)],fill=tuple(np.minimum(255,color+10)))
+                draw.polygon([pts[-2],pts[-1],pts[0],(cx+ox,cy+oy)],fill=tuple(np.maximum(0,color-10)))
+    return img
+
+def duplicate_ballasted_models(suffix,atlas):
+    variant_dir=MODEL_DIR/suffix; variant_dir.mkdir(parents=True,exist_ok=True)
+    texture_dir=TEXTURE_DIR/suffix; texture_dir.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(atlas,variant_dir/'rail_atlas.png'); shutil.copy2(atlas,variant_dir/'default.png'); shutil.copy2(atlas,TEXTURE_DIR/f'rail_atlas_{suffix}.png'); shutil.copy2(atlas,texture_dir/'rail_atlas.png')
+    legacy_dir=ROOT/'assets/citizons_railway/rail'/suffix; legacy_dir.mkdir(parents=True,exist_ok=True); shutil.copy2(atlas,legacy_dir/'rail_atlas.png')
+    for prefix in ('rail','outer_guard','center_guard'):
+        for level in ('high','mid','low'):
+            source=MODEL_DIR/f'{prefix}_{level}.obj'; target=MODEL_DIR/f'{prefix}_{suffix}_{level}.obj'
+            text=source.read_text(encoding='ascii').replace(f'mtllib {prefix}_{level}.mtl',f'mtllib {prefix}_{suffix}_{level}.mtl')
+            target.write_text(text,encoding='ascii')
+            mtl=(MODEL_DIR/f'{prefix}_{level}.mtl').read_text(encoding='ascii')
+            variant_mtl=mtl.replace('citizons_railway:textures/rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png').replace('citizons_railway:rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png').replace('map_Kd rail_atlas.png',f'map_Kd citizons_railway:rail/{suffix}/rail_atlas.png')
+            (MODEL_DIR/f'{prefix}_{suffix}_{level}.mtl').write_text(variant_mtl,encoding='ascii')
+            target=variant_dir/f'{prefix}_{level}.obj'; target.write_text(source.read_text(encoding='ascii'),encoding='ascii')
+            (variant_dir/f'{prefix}_{level}.mtl').write_text(mtl.replace('citizons_railway:textures/rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png').replace('citizons_railway:rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png'),encoding='ascii')
+        for endpoint in (() if prefix=='rail' else (f'{prefix}_endpoint',)):
+            source=MODEL_DIR/f'{endpoint}.obj'; target=MODEL_DIR/f'{endpoint}_{suffix}.obj'
+            text=source.read_text(encoding='ascii').replace(f'mtllib {endpoint}.mtl',f'mtllib {endpoint}_{suffix}.mtl')
+            target.write_text(text,encoding='ascii')
+            mtl=(MODEL_DIR/f'{endpoint}.mtl').read_text(encoding='ascii')
+            variant_mtl=mtl.replace('citizons_railway:textures/rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png').replace('citizons_railway:rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png').replace('map_Kd rail_atlas.png',f'map_Kd citizons_railway:rail/{suffix}/rail_atlas.png')
+            (MODEL_DIR/f'{endpoint}_{suffix}.mtl').write_text(variant_mtl,encoding='ascii')
+            (variant_dir/f'{endpoint}.obj').write_text(source.read_text(encoding='ascii'),encoding='ascii')
+            (variant_dir/f'{endpoint}.mtl').write_text(mtl.replace('citizons_railway:textures/rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png').replace('citizons_railway:rail/rail_atlas.png',f'citizons_railway:rail/{suffix}/rail_atlas.png'),encoding='ascii')
+
+def write_ballasted_variants(suffix,name_suffix):
+    style_path=ROOT/'assets/mtrsteamloco/rails/citizons_railway.json'
+    styles=json.loads(style_path.read_text(encoding='utf8'))
+    profiles=ROOT/'assets/citizons_railway/rail_profiles'
+    for base_id,prefix,label in (('citizons_mainline_1435','rail','有砟'),('citizons_outer_guard_1435','outer_guard','有砟外护轨'),('citizons_center_guard_1435','center_guard','有砟中央护轨')):
+        new_id=f'{base_id}_{suffix}'
+        model_names={f'rail_{level}.obj':f'{suffix}/rail_{level}.obj' for level in ('high','mid','low')}
+        model_names.update({f'{prefix}_{level}.obj':f'{suffix}/{prefix}_{level}.obj' for level in ('high','mid','low')})
+        model_names[f'{prefix}_endpoint.obj']=f'{suffix}/{prefix}_endpoint.obj'
+        profile=json.loads((profiles/f'{base_id}.json').read_text(encoding='utf8'))
+        raw=json.dumps(profile,ensure_ascii=False).replace('_new_','_').replace('/new/','/')
+        for old,new in model_names.items(): raw=raw.replace(old,new)
+        profile=json.loads(raw); profile['style']=new_id
+        if prefix!='rail':
+            fitting='outer_fastener' if prefix=='outer_guard' else 'center_fastener'
+            profile['modelGroups']['fastener']=['fastener_right']
+            profile['modelGroups']['supports']=['sleeper','fastener_left','fastener_right',fitting+'_left',fitting+'_right']
+            profile.setdefault('continuousGuard',{})['supportGroups']=[fitting+'_left',fitting+'_right']
+        (profiles/f'{new_id}.json').write_text(json.dumps(profile,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+        style=styles[base_id].copy(); style['name']=style['name']+f' ({name_suffix})'
+        raw=json.dumps(style,ensure_ascii=False).replace('_new_','_').replace('/new/','/')
+        for old,new in model_names.items(): raw=raw.replace(old,new)
+        style=json.loads(raw); style['textureId']=f'citizons_railway:rail/{suffix}/rail_atlas.png'
+        styles[new_id]=style
+    style_path.write_text(json.dumps(styles,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+
+def merge_new_into_base():
+    style_path=ROOT/'assets/mtrsteamloco/rails/citizons_railway.json'
+    styles=json.loads(style_path.read_text(encoding='utf8'))
+    profiles=ROOT/'assets/citizons_railway/rail_profiles'
+    for base_id in ('citizons_mainline_1435','citizons_outer_guard_1435','citizons_center_guard_1435'):
+        new_id=base_id+'_new'; styles[base_id]=json.loads(json.dumps(styles[new_id])); styles[base_id]['name']=styles[base_id]['name'].replace(' (新)','（新）'); del styles[new_id]
+        profile=json.loads((profiles/f'{new_id}.json').read_text(encoding='utf8')); profile['style']=base_id
+        (profiles/f'{base_id}.json').write_text(json.dumps(profile,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+        (profiles/f'{new_id}.json').unlink()
+    style_path.write_text(json.dumps(styles,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
 
 def cross(a,b): return (a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])
 def sub(a,b): return tuple(x-y for x,y in zip(a,b))
@@ -146,7 +249,7 @@ class Obj:
             if group=='ballast': keep=normal[1]>.5 or cy>(-.1 if detail==1 else .02)
             elif group=='sleeper': keep=normal[1]>.5 or cy>.04 or abs(normal[1])<.5
             elif group.startswith('fastener') or group.startswith('outer_fastener') or group.startswith('center_fastener'):
-                keep=normal[1]>.5
+                keep=normal[1]>.5 or (detail==1 and abs(normal[1])<.5) or cy<-.33
             elif group in ('slab_bed','direct_bearer'): keep=normal[1]>-.5
             else: keep=True
             if keep:
@@ -227,7 +330,7 @@ class Obj:
             if g!=group: lines += ['g '+g,'usemtl mat']; group=g
             lines.append('f '+' '.join(f'{v}/{t}/{n}' for v,t,n in indices))
         path.write_text('\n'.join(lines)+'\n',encoding='ascii')
-        path.with_suffix('.mtl').write_text('newmtl mat\nKa 1 1 1\nKd 1 1 1\nKs 0.12 0.12 0.12\nNs 32\nd 1\nillum 2\nmap_Kd rail_atlas.png\n',encoding='ascii')
+        path.with_suffix('.mtl').write_text('newmtl mat\nKa 1 1 1\nKd 1 1 1\nKs 0.12 0.12 0.12\nNs 32\nd 1\nillum 2\nmap_Kd citizons_railway:rail/rail_atlas.png\n',encoding='ascii')
 
 def add_rail(obj,cx,profile,group_prefix='rail',caps=True,polished_head=True):
     side='right' if cx>0 else 'left'
@@ -278,8 +381,8 @@ def add_sleeper(obj,z=0,detail=2,flat=False,bottom=None,vertical_sides=False):
             n=(j+1)%6; ps=[rings[k][j],rings[k+1][j],rings[k+1][n],rings[k][n]]
             if j in (0,2,3,4): outward=(0,-1 if j==0 else 1,0); uv=[(p[0]/.6-tile,(p[2]-z+.3)/.6) for p in ps]
             else: outward=(0,0,1 if j==1 else -1); uv=[(p[0]/.6-tile,(p[1]-uv_bottom)/.6) for p in ps]
-            obj.face(ps,'concrete',uv,outward)
-    for k in (0,len(rings)-1): obj.face(rings[k],'concrete',[((p[2]-z+.12)/.24,(p[1]-uv_bottom)/.12) for p in rings[k]],(-1 if k==0 else 1,0,0))
+            obj.face(ps,'sleeper_concrete',uv,outward)
+    for k in (0,len(rings)-1): obj.face(rings[k],'sleeper_concrete',[((p[2]-z+.12)/.24,(p[1]-uv_bottom)/.12) for p in rings[k]],(-1 if k==0 else 1,0,0))
 
 def add_lod_sleeper(obj,z=0,detail=2,flat=False):
     # All LODs keep the full 120 mm body. Only the top-profile sampling changes.
@@ -334,7 +437,8 @@ def plate(obj,cx,cz,hx,hz,y0,y1,chamfer=.006,region='fastener',cap_bottom=True,c
     if cap_top: obj.face(rings[1],region,[((x+hx)/(2*hx),(z+hz)/(2*hz)) for x,z in outline],(0,1,0))
     for i in range(len(outline)):
         j=(i+1)%len(outline);ps=[rings[0][i],rings[0][j],rings[1][j],rings[1][i]]
-        obj.face(ps,region,[(0,0),(1,0),(1,1),(0,1)],(sum(p[0]-cx for p in ps),0,sum(p[2]-cz for p in ps)))
+        side_region='fastener' if region in ('rubber','pad') else region
+        obj.face(ps,side_region,[(0,0),(1,0),(1,1),(0,1)],(sum(p[0]-cx for p in ps),0,sum(p[2]-cz for p in ps)))
 
 def pressure_plate(obj,cx,cz,side,simple=False):
     # A full rectangular plate beneath BOTH W-clip loops. Its inner lip overlaps
@@ -357,6 +461,17 @@ def pressure_plate(obj,cx,cz,side,simple=False):
 
 def add_fastener(obj,cx,cz=0,detail=2,group_prefix='fastener'):
     obj.group=group_prefix+'_right' if cx>0 else group_prefix+'_left' if cx<0 else group_prefix
+    if detail==0:
+        plate(obj,cx,cz,.191,.107,SEAT,BASE-.004,chamfer=0,region='rubber',cap_top=True)
+        return
+    if detail==1:
+        plate(obj,cx,cz,.076,.107,SEAT,BASE-.004,chamfer=0,region='rubber',cap_top=False)
+        plate(obj,cx,cz,.075,.106,BASE-.004,BASE,chamfer=0,region='pad',cap_bottom=False)
+        pressure_plate(obj,cx,cz,1,simple=True)
+        for sign in (-1,1):
+            plate(obj,cx+sign*.132,cz,.063,.103,SEAT,SEAT+.010,0)
+            plate(obj,cx+sign*.191,cz,.008,.107,SEAT+.010,BASE+.027,0,region='rubber')
+        return
     # The far model keeps the same visible footprint but uses square plates. The
     # chamfer corners are below the useful screen-space threshold at distance and
     # cost eight extra side faces per plate.
@@ -367,20 +482,35 @@ def add_fastener(obj,cx,cz=0,detail=2,group_prefix='fastener'):
         pressure_plate(obj,cx,cz,1,simple=True)
     for sign in (-1,1):
         # Separate side plate and outer gauge stop, as in the user's reference.
-        plate(obj,cx+sign*.132,cz,.063,.103,SEAT,SEAT+.010,0 if detail==0 else .003)
+        plate(obj,cx+sign*.132,cz,.063,.103,SEAT,SEAT+.010,0 if detail==0 else .003,region='fastener')
         plate(obj,cx+sign*.191,cz,.008,.107,SEAT+.010,BASE+.027,0 if detail==0 else .002,region='rubber')
-        if detail>0: pressure_plate(obj,cx,cz,sign)
+        if detail>1: pressure_plate(obj,cx,cz,sign)
         if detail>0:
             bolt=cx+sign*.133
-            prism(obj,bolt,cz,.010,.010,SEAT+.010,.192,sides=6,cap_bottom=detail<2)
-            prism(obj,bolt,cz,.030,.030,.162,.168,sides=8)
-            prism(obj,bolt,cz,.020,.020,.168,.186,sides=6,cap_bottom=detail<2)
-            prism(obj,bolt,cz,.018,.018,.186,.189,sides=6,cap_bottom=detail<2)
+            if detail==1:
+                prism(obj,bolt,cz,.012,.012,SEAT+.010,.176,sides=6,cap_bottom=True)
+            else:
+                prism(obj,bolt,cz,.010,.010,SEAT+.010,.192,sides=6,cap_bottom=False)
+                prism(obj,bolt,cz,.030,.030,.162,.168,sides=8)
+                prism(obj,bolt,cz,.020,.020,.168,.186,sides=6,cap_bottom=False)
+                prism(obj,bolt,cz,.018,.018,.186,.189,sides=6,cap_bottom=False)
             if detail>1: add_clip(obj,cx,cz,sign)
 
 def add_guard_fastener(obj,cx,running,cz=0,detail=2,group_prefix='guard_fastener'):
     """Point Advanced style guardPair: shared base, running-rail cheek, ribs and bolt."""
     obj.group=group_prefix+'_right' if cx>0 else group_prefix+'_left'
+    if detail==0:
+        direction=1 if cx>running else -1
+        a,b=running-direction*.21,cx+direction*.20
+        plate(obj,(a+b)/2,cz,abs(b-a)/2,.108,SEAT,BASE,chamfer=0)
+        return
+    if detail==1:
+        direction=1 if cx>running else -1
+        a,b=running-direction*.21,cx+direction*.20
+        plate(obj,(a+b)/2,cz,abs(b-a)/2,.108,SEAT,BASE,chamfer=0)
+        plate(obj,cx+direction*.0185,cz,.0055,.08,BASE+.036,BASE+.10,chamfer=0)
+        prism(obj,cx+direction*.155,cz,.017,.017,BASE+.006,BASE+.027,sides=6,cap_bottom=True)
+        return
     direction=1 if cx>running else -1
     a,b=running-direction*.21,cx+direction*.20
     plate(obj,(a+b)/2,cz,abs(b-a)/2,.108,SEAT,BASE,chamfer=0)
@@ -401,6 +531,13 @@ def add_guard_fastener(obj,cx,running,cz=0,detail=2,group_prefix='guard_fastener
 
 def add_outer_clamp(obj,cx,detail):
     """Same plane clipping as TurnoutFittings.outerClamp (footWidth * .28)."""
+    # The low-detail clamp is a single plate, so it must name its own role group;
+    # otherwise it inherits the previous sleeper group and ProfileModel.read
+    # fails on the missing fastener group, discarding mid/low LODs entirely.
+    obj.group='fastener_right' if cx>0 else 'fastener_left'
+    if detail==0:
+        plate(obj,cx,0,.191,.107,SEAT,BASE-.004,chamfer=0,region='rubber',cap_top=True)
+        return
     source=Obj('clamp'); add_fastener(source,cx,detail=detail)
     sign=1 if cx>0 else -1
     for index,(group,region,points,uv,normal) in enumerate(source.faces):
@@ -422,6 +559,16 @@ def add_outer_clamp(obj,cx,detail):
 def add_center_fastener(obj,cx,detail):
     """Independent compact bolted seats; do not bridge the wide central gap."""
     obj.group='center_fastener_right' if cx>0 else 'center_fastener_left'
+    if detail==0:
+        plate(obj,cx,0,.132,.105,SEAT,BASE-.004,chamfer=0)
+        return
+    if detail==1:
+        plate(obj,cx,0,.132,.105,SEAT,BASE-.004,chamfer=0)
+        plate(obj,cx,0,.075,.102,BASE-.004,BASE,region='pad',cap_bottom=False)
+        for sign in (-1,1):
+            plate(obj,cx+sign*.089,0,.039,.075,BASE+.014,BASE+.025,chamfer=0)
+            prism(obj,cx+sign*.106,0,.017,.017,BASE+.025,BASE+.045,sides=6,cap_bottom=True)
+        return
     # The center-guard base is wider than its upper pad, so its exposed top
     # perimeter is visible and must remain. Only the pad's underside is hidden.
     plate(obj,cx,0,.132,.105,SEAT,BASE-.004)
@@ -475,9 +622,12 @@ def add_slab_bed(obj,detail=2):
     obj.group='slab_bed'
     top=TRACK_BED_TOP; bottom=SLAB_BED_BOTTOM
     # A flat foundation separates the recessed rail seat from its raised shoulders.
-    section=[(-1.55,top),(-1.51,top),(-1.08,top),
-             (-1.04,top),(-.48,top),(-.44,top),(.44,top),
-             (.48,top),(1.04,top),(1.08,top),(1.51,top),(1.55,top)]
+    if detail==2:
+        section=[(-1.55,top),(-1.08,top),(-.48,top),(-.44,top),(.44,top),(.48,top),(1.08,top),(1.55,top)]
+    elif detail==1:
+        section=[(-1.55,top),(-1.08,top),(-.44,top),(.44,top),(1.08,top),(1.55,top)]
+    else:
+        section=[(-1.55,top),(-.44,top),(.44,top),(1.55,top)]
     uv=[(0,0),(1,0),(1,1),(0,1)]
     for (x0,y0),(x1,y1) in zip(section,section[1:]):
         obj.face([(x0,y0,-.3),(x1,y1,-.3),(x1,y1,.3),(x0,y0,.3)],'concrete',uv,(y0-y1,x1-x0,0))
@@ -496,14 +646,22 @@ def add_direct_bearers(obj,detail=2):
         # supports rather than isolated pads.
         # Wider than the original rail seat and raised slightly into the
         # fastening base so there is no visible gap below the hardware.
-        plate(obj,cx,0,.145*1.8,.300,TRACK_BED_BOTTOM,SEAT+.006,chamfer=0,region='concrete')
+        bottom=TRACK_BED_BOTTOM if detail==2 else TRACK_BED_TOP-.14
+        plate(obj,cx,0,.145*1.8,.300,bottom,SEAT+.006,chamfer=0,region='concrete',cap_bottom=detail==2)
 
-def curved_sleeper_block(obj,cx,hx,hz,y0,y1):
+def curved_sleeper_block(obj,cx,hx,hz,y0,y1,detail=2):
     """Extruded rounded shoulder section used by the visible concrete blocks."""
     # Recessed central rail seat with raised shoulders outside the fastening.
-    section=[(-hx,y0),(hx,y0),(hx-.015,y1+.012),(hx-.055,y1+.042),
-             (hx-.095,y1+.042),(.205,y1),(-.205,y1),
-             (-hx+.095,y1+.042),(-hx+.055,y1+.042),(-hx+.015,y1+.012)]
+    if detail==2:
+        section=[(-hx,y0),(hx,y0),(hx-.015,y1+.012),(hx-.055,y1+.042),
+                 (hx-.095,y1+.042),(.205,y1),(-.205,y1),
+                 (-hx+.095,y1+.042),(-hx+.055,y1+.042),(-hx+.015,y1+.012)]
+    elif detail==1:
+        section=[(-hx,y0),(hx,y0),(hx-.015,y1+.012),(hx-.095,y1+.042),
+                 (.205,y1),(-.205,y1),(-hx+.095,y1+.042),(-hx+.015,y1+.012)]
+    else:
+        section=[(-hx,y0),(hx,y0),(hx-.015,y1+.012),(.25,y1+.042),(.205,y1),
+                 (-.205,y1),(-.25,y1+.042),(-hx+.015,y1+.012)]
     rings=[[(cx+x,y,z) for x,y in section] for z in (-hz,hz)]
     cap_uv=[((x+hx)/(2*hx),(y-y0)/(y1+.042-y0)) for x,y in section]
     for ring,outward in ((rings[0],(0,0,-1)),(rings[1],(0,0,1))):
@@ -517,7 +675,7 @@ def add_block_supports(obj,detail=2):
     obj.group='sleeper'
     for cx in (-CENTER,CENTER):
         hx=.34; hz=.107; y0=TRACK_BED_TOP; y1=SEAT
-        curved_sleeper_block(obj,cx,hx,hz,y0,y1)
+        curved_sleeper_block(obj,cx,hx,hz,y0,y1,detail)
 
 def make_guard_endpoint(kind):
     """Separate terminal asset: z=0 exposed tip, z=length straight handoff.
@@ -562,9 +720,6 @@ def make_guard_endpoint(kind):
             obj.face([a[i],a[j],b[j],b[i]],'concrete',[(0,0),(1,0),(1,1),(0,1)],outward)
         for ring_,outward in ((a,(0,0,-1)),(b,(0,0,1))):
             obj.face(ring_,'concrete',[(0,0),(1,0),(1,1),(0,1)],outward)
-        for sign in (-1,1):
-            bolt_seat=nose_tip+(TOP-nose_tip)*(.44/.55)
-            prism(obj,sign*.13,.44,.018,.018,bolt_seat-.006,bolt_seat+.009,sides=6)
     obj.save(MODEL_DIR/f'{obj.name}.obj')
     return obj
 
@@ -604,13 +759,16 @@ def main():
     sleeper=Obj('sleeper'); add_lod_sleeper(sleeper); sleeper.save(MODEL_DIR/'sleeper.obj')
     fitting=Obj('fastener'); add_fastener(fitting,0); fitting.compact_hardware(); fitting.save(MODEL_DIR/'fastener.obj')
     for kind in ('outer','center'): make_guard_endpoint(kind)
+    duplicate_ballasted_models('old',make_variant_atlas('old',(155,164,166),1))
+    duplicate_ballasted_models('new',make_variant_atlas('new',(188,195,196),0))
     style=ROOT/'assets/mtrsteamloco/rails/citizons_railway.json'; data=json.loads(style.read_text(encoding='utf-8-sig'))
     data.pop('citizons_guarded_1435',None)
     data['citizons_mainline_1435'].update(name='Citizons 高仿真钢轨 有砟 1435mm',repeatInterval=.6,flipV=True,yOffset=0.0)
-    data['citizons_outer_guard_1435']={'name':'Citizons 高仿真钢轨(外护轨) 有砟 1435mm','model':'citizons_railway:models/rail/outer_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
-    data['citizons_center_guard_1435']={'name':'Citizons 高仿真钢轨(中央护轨) 有砟 1435mm','model':'citizons_railway:models/rail/center_guard_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
-    data['citizons_slab_1435']={'name':'Citizons 高仿真钢轨 无砟 有枕 1435mm','model':'citizons_railway:models/rail/slab_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
-    data['citizons_direct_1435']={'name':'Citizons 高仿真钢轨 无砟 无枕 1435mm','model':'citizons_railway:models/rail/direct_high.obj','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_mainline_1435']['textureId']='citizons_railway:rail/new/rail_atlas.png'
+    data['citizons_outer_guard_1435']={'name':'Citizons 高仿真钢轨(外护轨) 有砟 1435mm','model':'citizons_railway:models/rail/outer_guard_high.obj','textureId':'citizons_railway:rail/new/rail_atlas.png','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_center_guard_1435']={'name':'Citizons 高仿真钢轨(中央护轨) 有砟 1435mm','model':'citizons_railway:models/rail/center_guard_high.obj','textureId':'citizons_railway:rail/new/rail_atlas.png','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_slab_1435']={'name':'Citizons 高仿真钢轨 无砟 有枕 1435mm','model':'citizons_railway:models/rail/slab_high.obj','textureId':'citizons_railway:rail/rail_atlas.png','repeatInterval':.6,'yOffset':0.0,'flipV':True}
+    data['citizons_direct_1435']={'name':'Citizons 高仿真钢轨 无砟 无枕 1435mm','model':'citizons_railway:models/rail/direct_high.obj','textureId':'citizons_railway:rail/rail_atlas.png','repeatInterval':.6,'yOffset':0.0,'flipV':True}
     style.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     descriptor=ROOT/'assets/citizons_railway/rail_profiles/citizons_mainline_1435.json'
     data=json.loads(descriptor.read_text(encoding='utf-8-sig'))
@@ -649,6 +807,7 @@ def main():
     (ROOT/'assets/citizons_railway/rail_profiles/citizons_slab_1435.json').write_text(json.dumps(slab,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
     direct=json.loads(json.dumps(slab)); direct['style']='citizons_direct_1435'; direct['model']='citizons_railway:models/rail/direct_high.obj'
     for level,prefix in (('near','direct_high'),('mid','direct_mid'),('far','direct_low')): direct['lod'][level]['model']=f'citizons_railway:models/rail/{prefix}.obj'
+    direct['textureId']='citizons_railway:rail/rail_atlas.png'
     direct['modelGroups']={'rail':['rail_right'],'sleeper':['direct_bearer'],'fastener':['fastener_right'],'preserve':['direct_bearer'],'supports':['fastener_left','fastener_right']}
     direct['continuousSupports']=True
     direct.pop('shapedSleepers',None)
@@ -664,6 +823,9 @@ def main():
         else:
             for key,distance in (('near',4),('mid',12),('far',128)):lod[key]['maxDistance']=distance
         path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    write_ballasted_variants('old','旧')
+    write_ballasted_variants('new','新')
+    merge_new_into_base()
     print('Resource-only build complete:',MODEL_DIR)
 
 if __name__=='__main__': main()

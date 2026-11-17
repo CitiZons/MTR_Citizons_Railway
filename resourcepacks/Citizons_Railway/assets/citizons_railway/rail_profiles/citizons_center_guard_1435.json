@@ -8,19 +8,19 @@
   "railHeight": 0.165,
   "steelTexture": "citizons_railway:textures/rail/steel.png",
   "sleeperTexture": "citizons_railway:textures/rail/concrete.png",
-  "model": "citizons_railway:models/rail/center_guard_high.obj",
+  "model": "citizons_railway:models/rail/new/center_guard_high.obj",
   "steelEndTexture": "citizons_railway:textures/rail/steel_end.png",
   "lod": {
     "near": {
-      "model": "citizons_railway:models/rail/center_guard_high.obj",
+      "model": "citizons_railway:models/rail/new/center_guard_high.obj",
       "maxDistance": 4
     },
     "mid": {
-      "model": "citizons_railway:models/rail/center_guard_mid.obj",
+      "model": "citizons_railway:models/rail/new/center_guard_mid.obj",
       "maxDistance": 12
     },
     "far": {
-      "model": "citizons_railway:models/rail/center_guard_low.obj",
+      "model": "citizons_railway:models/rail/new/center_guard_low.obj",
       "maxDistance": 128
     },
     "selection": "distance",
@@ -60,10 +60,10 @@
     "supportInset": 0.286,
     "supportMode": "independent",
     "noseLength": 0.55,
-    "endpointModel": "citizons_railway:models/rail/center_guard_endpoint.obj",
+    "endpointModel": "citizons_railway:models/rail/new/center_guard_endpoint.obj",
     "endpointLength": 1.8,
     "turnout": {
-      "model": "citizons_railway:models/rail/rail_high.obj",
+      "model": "citizons_railway:models/rail/new/rail_high.obj",
       "modelGroups": {
         "rail": [
           "rail_right"
@@ -85,15 +85,15 @@
       },
       "lod": {
         "near": {
-          "model": "citizons_railway:models/rail/rail_high.obj",
+          "model": "citizons_railway:models/rail/new/rail_high.obj",
           "maxDistance": 4
         },
         "mid": {
-          "model": "citizons_railway:models/rail/rail_mid.obj",
+          "model": "citizons_railway:models/rail/new/rail_mid.obj",
           "maxDistance": 12
         },
         "far": {
-          "model": "citizons_railway:models/rail/rail_low.obj",
+          "model": "citizons_railway:models/rail/new/rail_low.obj",
           "maxDistance": 128
         },
         "selection": "distance",

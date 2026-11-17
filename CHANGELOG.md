@@ -1,5 +1,31 @@
 # 更新记录 / Changelog
 
+## 0.1.5 — 2026-11-17
+
+- 三种有砟轨道新增 `（新）` 默认入口和 `(旧)` 兼容入口。默认入口使用更浅的道砟、混凝土和轨枕配色，旧入口保留较早的深色材质；两套共用几何，各自使用独立图集和 `textureId`。MTR 样式入口由 5 个增至 8 个。
+- 图集扩展到 800×800，新增独立的 `sleeper_concrete` 区域。枕木改用专门的无缝混凝土纹理，混凝土加入多尺度颜色与烘焙 AO，道砟颗粒配色重调。
+- 重做中、低精度扣件轮廓：中精度使用简化的压板、侧板和轨距挡板，低精度收敛为单块底板；外护轨和中央护轨也使用对应的低、中精度专用件。
+- 简化无砟有枕和直接支承的中、低精度截面：减少承接块肩部和纵条分段，直接支承中低精度抬高条底，减少不可见侧面。
+- 修复首次进入世界时有砟轨道大面积变紫或材质缺失：`models/rail/new`、`models/rail/old` 下的变体 OBJ 重新声明各自的 `mtllib`，使 MTR 从同目录 MTL 解析材质，而不是回退到不存在的 `models/rail/{new,old}/mat.png`。
+- 修复有砟外护轨中、低精度扣件回退高精度：低精度外护轨压板写入 `fastener_left` / `fastener_right` 分组，`ProfileModel.read` 不再因缺少扣件组而丢弃整套中、低精度模型。
+- 修复中央护轨端头同时绘制偏移和未偏移扣件：护轨扣件组同时列入 `modelGroups.supports` 与 `continuousGuard.supportGroups`；端头保护鼻也不再附加与收窄钢轨重叠的锚栓。
+- 为全部 8 个样式入口补齐显式 `textureId`；此前 `citizons_direct_1435` 缺少该字段。
+- 面数更新为：有砟普通 1528／376／240，外护轨 1232／446／298，中央护轨 1810／530／298，无砟有枕 1210／285／213，无砟无枕 1140／238／172。
+- 资源包再生成、运行时契约审计和打包通过；版本目录与兼容 ZIP 同步生成。
+- 支持 Point Advanced `0.1.7+`；本版与 `0.1.11` 完整验证。
+
+- Split each ballasted family into a `（新）` default entry and an `(旧)` compatibility entry. The default uses the lighter ballast, concrete and sleeper palette; the legacy entry keeps the earlier dark materials. Both share geometry but use separate atlases and `textureId` values. The pack now exposes 8 MTR style entries instead of 5.
+- Expand the atlas to 800×800 and add a dedicated `sleeper_concrete` region. Sleepers use a separate seamless concrete texture; concrete gains multi-scale colour and baked AO, and the ballast palette is retuned.
+- Rework medium and low fitting outlines: medium detail uses simplified pressure plates, side plates and gauge stops; low detail collapses to a single base plate. Outer and central guards use matching dedicated medium/low fittings.
+- Simplify slab and direct-support LOD sections: reduce shoulder and longitudinal-strip segments, and raise the direct-support strip bottom at medium and low detail to remove unseen faces.
+- Fix purple or missing-material ballasted tracks on first load: variant OBJs under `models/rail/new` and `models/rail/old` now declare their own `mtllib`, so MTR resolves the material from the adjacent MTL instead of falling back to the nonexistent `models/rail/{new,old}/mat.png`.
+- Fix mid/low outer-guard fasteners falling back to high detail: the low-detail outer clamp now writes `fastener_left` / `fastener_right`, so `ProfileModel.read` no longer drops the entire mid/low LOD set for a missing fastener group.
+- Fix duplicate offset and unshifted fasteners at tapered central-guard ends: guard fitting groups are listed in both `modelGroups.supports` and `continuousGuard.supportGroups`; the protective nose also no longer carries anchor bolts that overlap the converging rails.
+- Add an explicit `textureId` to all eight style entries; `citizons_direct_1435` was previously missing it.
+- Update face counts to 1528/376/240 for ballasted mainline, 1232/446/298 for outer guard, 1810/530/298 for central guard, 1210/285/213 for slab and 1140/238/172 for direct support.
+- Regeneration, runtime-contract audit and packaging pass; the versioned folder and compatibility ZIP are rebuilt.
+- Support Point Advanced `0.1.7+`; this release is fully validated with `0.1.11`.
+
 ## 0.1.4 — 2026-10-18
 
 - 支持 Point Advanced 0.1.7 及更新版本；客户端与服务器需使用同一构建。
